@@ -83,6 +83,22 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .brand-title { font-size: 17px; font-weight: 700; letter-spacing: 1px; }
 .brand-sub { font-size: 11.5px; color: var(--ink-3); }
 .key-box { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+/* 手机端专用的 Key 状态胶囊（桌面端隐藏） */
+.key-chip {
+  display: none; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: var(--radius-pill);
+  background: #fff; border: 1px solid var(--line);
+  font-size: 12px; color: var(--ink-2); font-weight: 500;
+}
+.key-chip .kc-dot {
+  width: 8px; height: 8px; border-radius: 50%; background: var(--ink-3); flex: 0 0 8px;
+}
+.key-chip.on { background: var(--green-soft); border-color: var(--green); color: #5E7358; }
+.key-chip.on .kc-dot { background: #6E9A5F; }
+/* 展开状态：点胶囊后显示出输入框与按钮 */
+.key-box.expanded .key-input,
+.key-box.expanded .btn-fill { display: block; }
+.key-box.expanded { width: 100%; }
 .key-input {
   width: 250px; padding: 9px 16px; font-size: 12.5px; font-family: inherit;
   border: 1px solid var(--line); border-radius: var(--radius-pill);
@@ -355,7 +371,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   transition: all .2s var(--ease); margin-top: 20px;
 }
 .more-toggle:hover { border-color: var(--green); color: var(--green-deep); }
-.more-toggle .mt-right { font-size: 11.5px; font-weight: 400; color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
+.more-toggle .mt-right { font-size: 11.5px; font-weight: 400; color: var(--ink-3); display: flex; align-items: center; gap: 6px; min-width: 0; flex: 1; justify-content: flex-end; }
+.more-toggle .mt-right #moreSummary {
+  display: block; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  min-width: 0;
+}
+.more-toggle > span:first-child { flex: 0 0 auto; white-space: nowrap; }
 .more-body { padding-top: 4px; }
 .more-body.collapsed { display: none; }
 
@@ -651,7 +672,66 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 #installHint .ih-close:hover { background: var(--blush-soft); color: var(--blush-deep); }
 
-/* ---------- 响应式 ---------- */
+/* ============================================================================
+   手机端：输入面板底部的操作条（吸底「完成，看推荐」+ 重置）
+   填完条件点一下收起面板并回到推荐结果，比让它一直悬着更明确
+   ============================================================================ */
+.panel-actions {
+  display: none;                 /* 桌面端不需要，面板一直可见 */
+  position: sticky; bottom: -22px; z-index: 5;
+  margin: 20px -22px -22px;      /* 抵消面板内边距，做成贴边的一条 */
+  padding: 12px 22px calc(12px + env(safe-area-inset-bottom, 0px));
+  background: linear-gradient(to top, #fff 72%, rgba(255, 255, 255, .92));
+  border-top: 1px solid var(--line);
+  gap: 10px;
+}
+.panel-actions .pa-main {
+  flex: 1; padding: 13px 20px; border-radius: var(--radius-pill);
+  background: var(--blush); color: #fff; font-size: 14px; font-weight: 700;
+  box-shadow: 0 4px 14px rgba(212, 165, 154, .38);
+  transition: transform .16s var(--ease), background .16s var(--ease);
+}
+.panel-actions .pa-main:hover { background: var(--blush-deep); }
+.panel-actions .pa-main:active { transform: scale(.97); }
+.panel-actions .pa-reset {
+  flex: 0 0 auto; padding: 13px 18px; border-radius: var(--radius-pill);
+  background: var(--cream-deep); color: var(--ink-2); font-size: 13.5px; font-weight: 600;
+}
+.panel-actions .pa-reset:active { transform: scale(.97); }
+@media (max-width: 1080px) {
+  .panel-actions { display: flex; }
+}
+
+/* ============================================================================
+   App 形态：底部标签栏（仅手机/平板显示）+ iOS 安全区适配
+   ============================================================================ */
+.tabbar {
+  display: none;
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 80;
+  background: rgba(255, 255, 255, .96);
+  backdrop-filter: blur(12px);
+  border-top: 1px solid var(--line);
+  padding: 6px 0 calc(6px + env(safe-area-inset-bottom, 0px));
+}
+.tabbar .tb-item {
+  flex: 1; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  padding: 6px 0; font-size: 10.5px; color: var(--ink-3); font-weight: 500;
+  transition: color .18s var(--ease), transform .18s var(--ease);
+}
+.tabbar .tb-item .tb-ico { font-size: 19px; line-height: 1; }
+.tabbar .tb-item:active { transform: scale(.94); }
+.tabbar .tb-item.on { color: var(--green-deep); font-weight: 700; }
+
+@media (max-width: 1080px) {
+  /* 顶部栏避让 iOS 状态栏 */
+  .topbar { padding-top: calc(14px + env(safe-area-inset-top, 0px)); }
+  /* 底部标签栏出现，同时给页面留出空间，避免遮住内容 */
+  .tabbar { display: flex; }
+  .wrap { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  #installHint { bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  /* 全屏弹窗也要避开 Home 横条 */
+  .modal-body { padding-bottom: calc(28px + env(safe-area-inset-bottom, 0px)); }
+}
 @media (max-width: 1080px) {
   .layout { grid-template-columns: 1fr; }
   .hero { height: 220px; }                 /* 平板：220px */
@@ -665,8 +745,15 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
     padding: 16px 20px; font-size: 15px; font-weight: 600; margin-bottom: 14px;
   }
   .panel.collapsed .panel-body { display: none; }
+  /* 手机 / 平板：收起高德 Key 输入区，只留状态胶囊，点击胶囊可展开重填 */
   .key-box { margin-left: 0; width: 100%; }
   .key-input { width: 100%; }
+  .key-box .key-input,
+  .key-box .btn-fill { display: none; }
+  .key-box .key-chip { display: inline-flex; }
+  .key-box.expanded .key-input,
+  .key-box.expanded .btn-fill { display: block; }
+  .status-line { font-size: 11px; }
 }
 @media (max-width: 720px) {
   .wrap, .topbar-inner { padding-left: 16px; padding-right: 16px; }
@@ -693,6 +780,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 <div id="boot" class="hidden" style="padding:12px 24px; font-size:13px; background:#F7EDEA; color:#A8776A;"></div>
 
+<!-- 启动期错误收集：任何运行期报错都会显示到上面的自检条，避免白屏无提示 -->
+<script>
+window.__BOOT_LOG__ = [];
+window.addEventListener('error', function (e) {
+  window.__BOOT_LOG__.push('错误：' + (e.message || '未知') + (e.lineno ? '（第 ' + e.lineno + ' 行）' : ''));
+});
+window.addEventListener('unhandledrejection', function (e) {
+  window.__BOOT_LOG__.push('未处理的 Promise 拒绝：' + (e.reason && e.reason.message ? e.reason.message : e.reason));
+});
+</script>
+
 <!-- ---------- 顶栏【名称】：小满出行 ---------- -->
 <header class="topbar">
   <div class="topbar-inner">
@@ -708,6 +806,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
       <button class="btn btn-fill" id="applyKey">应用并拉取真实数据</button>
       <span class="badge mock" id="srcBadge">示例数据</span>
       <span class="badge mock" id="apiBadge">接口 0 次</span>
+      <!-- 手机端专用：把上面那一整排收起来，只留这个小胶囊，点击可展开重新填 Key -->
+      <button class="key-chip" id="keyChip" type="button">
+        <span class="kc-dot"></span><span id="keyChipText">未填 Key</span>
+      </button>
     </div>
     <div class="status-line" id="statusLine">提示：不填 Key 也能完整体验，天气与活动地点会使用内置示例数据。</div>
   </div>
@@ -729,8 +831,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
       <!-- 可选：把一张横图命名为 assets/intro2.jpg 就会优先使用它，覆盖卡通动图 -->
       <img class="hero-image-img hidden" id="heroImageImg" alt="">
 
-      <!-- 卡通动图：全家自驾出游（内联 SVG + CSS 动画，无外部依赖、缩放不糊） -->
-      <svg class="hero-cartoon" viewBox="0 0 800 340" preserveAspectRatio="xMidYMid slice" aria-label="全家自驾出游动画">
+      <!-- 卡通动图：全家自驾出游（内联 SVG + CSS 动画，无外部依赖、缩放不糊）
+           画布 800×340，而容器偏扁，所以用 xMidYMax slice 只保留画面下部
+           （草地 / 树 / 帐篷 / 拍照的一家人 / 公路 / 小车），天空交给容器渐变背景 -->
+      <svg class="hero-cartoon" viewBox="0 0 800 340" preserveAspectRatio="xMidYMax slice" aria-label="全家自驾出游动画">
         <defs>
           <linearGradient id="cSky" x1="0" y1="0" x2="0" y2="1">
             <stop offset="0%"   stop-color="#CDE6F0"/>
@@ -1069,6 +1173,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
                 <option value="哈尔滨"></option><option value="昆明"></option><option value="贵阳"></option>
                 <option value="南宁"></option><option value="福州"></option><option value="济南"></option>
                 <option value="大连"></option><option value="厦门"></option><option value="兰州"></option>
+                <option value="锡林浩特"></option><option value="呼和浩特"></option><option value="包头"></option>
+                <option value="鄂尔多斯"></option><option value="赤峰"></option><option value="通辽"></option>
+                <option value="海拉尔"></option><option value="乌兰察布"></option>
+                <option value="烟台"></option><option value="徐州"></option><option value="常州"></option>
+                <option value="唐山"></option><option value="泉州"></option><option value="东莞"></option>
+                <option value="佛山"></option><option value="绍兴"></option><option value="潍坊"></option>
+                <option value="洛阳"></option><option value="银川"></option><option value="西宁"></option>
+                <option value="三亚"></option><option value="海口"></option><option value="苏州"></option>
+                <option value="宁波"></option><option value="无锡"></option><option value="温州"></option>
+                <option value="珠海"></option><option value="太原"></option><option value="石家庄"></option>
+                <option value="合肥"></option><option value="南昌"></option><option value="乌鲁木齐"></option>
               </datalist>
             </div>
             <div class="muted" id="originNote">已识别出发地，火车 / 飞机时长与票价按直线距离推算。</div>
@@ -1120,17 +1235,26 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
               </div>
             </div>
 
-            <!-- 预算范围 -->
+            <!-- 预算范围：支持总预算 / 人均预算，且可以填区间或选择「不限预算」 -->
             <div class="fieldset">
-              <div class="legend"><span class="num">4</span>预算范围</div>
+              <div class="legend"><span class="num">4</span>预算范围 <span class="opt">可填区间</span></div>
               <div class="picker" data-picker>
                 <label class="pick on"><input type="radio" name="budgetMode" value="total" checked>
                   <span class="ico">🧮</span><span class="txt">总预算</span></label>
                 <label class="pick"><input type="radio" name="budgetMode" value="perPerson">
                   <span class="ico">👤</span><span class="txt">人均预算</span></label>
+                <label class="pick"><input type="radio" name="budgetMode" value="none">
+                  <span class="ico">♾️</span><span class="txt">不限预算</span><span class="sub">不参与评分</span></label>
               </div>
-              <div class="row-2" style="margin-top:12px">
-                <div class="field"><label>金额</label><input class="input" type="number" id="inBudget" value="8000" min="500" step="500"></div>
+
+              <!-- 最低 / 最高：只填一个就当作上限，两个都填就是区间 -->
+              <div id="budgetRangeWrap">
+                <div class="row-2" style="margin-top:12px">
+                  <div class="field"><label>最低（可留空）</label>
+                    <input class="input" type="number" id="inBudgetMin" placeholder="不限" min="0" step="500"></div>
+                  <div class="field"><label>最高</label>
+                    <input class="input" type="number" id="inBudgetMax" value="8000" min="500" step="500"></div>
+                </div>
                 <div class="field"><label>币种</label>
                   <select class="input" id="inCurrency">
                     <option value="CNY" selected>人民币 CNY</option>
@@ -1139,6 +1263,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
                   </select>
                 </div>
               </div>
+              <div class="muted" id="budgetHint">只填「最高」表示预算上限；两个都填就是个区间。</div>
             </div>
 
             <!-- 住宿要求 -->
@@ -1206,6 +1331,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
             </div>
           </div>
         </div>
+
+        <!-- 手机端吸底操作条：填完条件点「完成」收起面板并回到推荐结果 -->
+        <div class="panel-actions" id="panelActions">
+          <button class="pa-main" id="panelDone">完成，看推荐结果</button>
+          <button class="pa-reset" id="panelReset">重置</button>
+        </div>
       </section>
     </aside>
 
@@ -1251,6 +1382,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   <button class="ih-close" id="ihClose" title="不再提示">✕</button>
 </div>
 
+<!-- ================= App 形态：底部标签栏（仅手机端显示） ================= -->
+<nav class="tabbar" id="tabbar">
+  <button class="tb-item on" data-tab="reco"><span class="tb-ico">🧭</span>推荐</button>
+  <button class="tb-item" data-tab="cond"><span class="tb-ico">📝</span>条件</button>
+  <button class="tb-item" data-tab="guide"><span class="tb-ico">🗺️</span>攻略</button>
+  <button class="tb-item" data-tab="top"><span class="tb-ico">⬆️</span>顶部</button>
+</nav>
+
 <script>
 /* ============================================================================
    模块 0 · 基础数据与工具（推荐逻辑与数据均沿用前几轮，未改动）
@@ -1264,7 +1403,16 @@ var ORIGIN_COORDS = {
   '厦门':[118.089,24.479], '济南':[117.121,36.651], '石家庄':[114.515,38.042], '太原':[112.549,37.857],
   '合肥':[117.227,31.821], '南昌':[115.858,28.683], '兰州':[103.834,36.061], '乌鲁木齐':[87.617,43.793],
   '海口':[110.199,20.044], '三亚':[109.508,18.247], '苏州':[120.585,31.299], '宁波':[121.550,29.875],
-  '无锡':[120.312,31.491], '温州':[120.699,27.994], '大连':[121.615,38.914], '珠海':[113.577,22.271]
+  '无锡':[120.312,31.491], '温州':[120.699,27.994], '大连':[121.615,38.914], '珠海':[113.577,22.271],
+  /* 内蒙古与华北、东北补充 */
+  '呼和浩特':[111.751,40.842], '包头':[109.840,40.658], '鄂尔多斯':[109.781,39.608],
+  '赤峰':[118.888,42.258], '锡林浩特':[116.086,43.933], '通辽':[122.244,43.653],
+  '海拉尔':[119.736,49.212], '乌兰察布':[113.114,40.994],
+  /* 其他常见出发地 */
+  '烟台':[121.448,37.464], '徐州':[117.184,34.262], '常州':[119.947,31.773],
+  '唐山':[118.180,39.631], '泉州':[118.589,24.874], '东莞':[113.752,23.021],
+  '佛山':[113.122,23.028], '绍兴':[120.582,29.997], '潍坊':[119.107,36.709],
+  '洛阳':[112.454,34.619], '银川':[106.231,38.487], '西宁':[101.778,36.617]
 };
 
 var HERO_GRADIENTS = [
@@ -1998,6 +2146,30 @@ function initHero() {
 /* ============================================================================
    模块 1 · 输入区：必填三项 + 画像卡片 + 「更多偏好」折叠
    ============================================================================ */
+/* 预算文案：区间 / 只填上限 / 不限 */
+function budgetLabel(inp) {
+  if (inp.budgetMode === 'none') return '不限预算';
+  var unit = (inp.budgetMode === 'perPerson') ? '人均' : '总';
+  var cur = inp.currency || 'CNY';
+  if (inp.budgetMin && inp.budgetMax) return unit + ' ' + inp.budgetMin + '–' + inp.budgetMax + ' ' + cur;
+  if (inp.budgetMax) return unit + '上限 ' + inp.budgetMax + ' ' + cur;
+  if (inp.budgetMin) return unit + ' ' + inp.budgetMin + ' ' + cur + ' 以上';
+  return '未填';
+}
+
+/* 预算提示文案：随填写情况变化 */
+function updateBudgetHint() {
+  var inp = readInputs();
+  var hint = el('budgetHint');
+  if (!hint) return;
+  var wrap = el('budgetRangeWrap');
+  if (wrap) wrap.style.display = (inp.budgetMode === 'none') ? 'none' : '';
+  if (inp.budgetMode === 'none') return;
+  if (inp.budgetMin && inp.budgetMax) hint.textContent = '预算区间：' + budgetLabel(inp) + '，落在区间内得分最高。';
+  else if (inp.budgetMax) hint.textContent = '只填「最高」表示预算上限：' + budgetLabel(inp) + '。';
+  else hint.textContent = '只填「最高」表示预算上限；两个都填就是个区间。';
+}
+
 function readInputs() {
   var accTypes = [];
   var boxes = document.querySelectorAll('.accType');
@@ -2014,7 +2186,8 @@ function readInputs() {
     kids: parseInt(el('inKids').value, 10) || 0,
     kidAge: el('inKidAge').value,
     budgetMode: radio('budgetMode', 'total'),
-    budget: parseFloat(el('inBudget').value) || 0,
+    budgetMin: parseFloat(el('inBudgetMin').value) || 0,
+    budgetMax: parseFloat(el('inBudgetMax').value) || 0,
     currency: el('inCurrency').value,
     accTypes: accTypes,
     breakfast: el('inBreakfast').checked,
@@ -2049,7 +2222,9 @@ function applyProfile(code) {
   el('inAdults').value = p.adults;
   el('inKids').value = p.kids;
   el('inKidAge').value = p.kidAge;
-  el('inBudget').value = p.budget;
+  /* 预算：兼容旧的单值 profiles[key].budget，也支持新的 min/max 区间 */
+  el('inBudgetMax').value = (p.budgetMax !== undefined) ? p.budgetMax : p.budget;
+  el('inBudgetMin').value = p.budgetMin || '';
   el('inCurrency').value = p.currency;
   var boxes = document.querySelectorAll('.accType');
   for (var i = 0; i < boxes.length; i++) boxes[i].checked = (p.acc.indexOf(boxes[i].value) >= 0);
@@ -2078,7 +2253,7 @@ function updateMoreSummary() {
   var acc = inp.accTypes.length ? inp.accTypes.join('/') : '不限';
   var el2 = el('moreSummary');
   if (el2) {
-    el2.textContent = tr + ' · ' + (inp.budgetMode === 'total' ? '总' : '人均') + inp.budget + inp.currency +
+    el2.textContent = tr + ' · ' + budgetLabel(inp) +
                       ' · ' + acc + ' · ' + inp.relax.replace('型', '') + ' · ' + inp.humidity + ' · ' + inp.temp;
   }
 }
@@ -2145,14 +2320,30 @@ function seasonFactor(city, inp) {
 }
 function scoreBudget(city, inp, days) {
   var trip = tripEstimate(city, inp, days);
-  var cap = (inp.budgetMode === 'perPerson')
-    ? inp.budget * (CURRENCY_RATE[inp.currency] || 1) * Math.max(1, inp.adults + inp.kids)
-    : inp.budget * (CURRENCY_RATE[inp.currency] || 1);
-  if (!cap) return { score:0.5, total:trip.total, cap:0, overshoot:0 };
-  var overshoot = (trip.total - cap) / cap;
-  var s = (trip.total <= cap) ? 0.85 + 0.15 * clamp(trip.total / cap, 0, 1)
-                              : clamp(1 - overshoot * 0.55, 0, 0.85);
-  return { score:clamp(s, 0, 1), total:trip.total, cap:cap, overshoot:overshoot };
+  /* 「不限预算」→ 该维度权重归零，分数固定 0.5（与干湿度的处理一致） */
+  if (inp.budgetMode === 'none') return { score:0.5, disabled:true, total:trip.total, cap:0, floor:0, overshoot:0 };
+
+  var rate = CURRENCY_RATE[inp.currency] || 1;
+  var heads = Math.max(1, inp.adults + inp.kids);
+  var toTotal = (inp.budgetMode === 'perPerson') ? (inp.budgetMax * rate * heads) : (inp.budgetMax * rate);
+  var fromTotal = (inp.budgetMode === 'perPerson') ? (inp.budgetMin * rate * heads) : (inp.budgetMin * rate);
+  if (!toTotal) toTotal = fromTotal;        // 只填了最低，则视为上限
+  if (!toTotal) return { score:0.5, disabled:true, total:trip.total, cap:0, floor:0, overshoot:0 };
+
+  var floor = Math.min(fromTotal, toTotal);
+  var cap = Math.max(fromTotal, toTotal);
+  var t = trip.total, s;
+  if (t <= cap && t >= floor) {
+    /* 落在区间内：靠近上限说明「预算用得上」，略高一点分 */
+    s = 0.92 + 0.08 * clamp((t - floor) / Math.max(1, cap - floor), 0, 1);
+  } else if (t < floor) {
+    s = 0.90;                              // 低于预算下限：省钱不扣分，但也说明需求没被满足
+  } else {
+    var overshoot = (t - cap) / cap;
+    s = clamp(1 - overshoot * 0.55, 0, 0.85);   // 超上限：按超出比例衰减
+  }
+  return { score:clamp(s, 0, 1), disabled:false, total:t, cap:cap, floor:floor,
+           overshoot:(t > cap ? (t - cap) / cap : 0) };
 }
 function scoreStay(city, inp) {
   var typeHit = 0.6;
@@ -2227,6 +2418,7 @@ function scoreAll(inp) {
   var totalWeight = 0;
   for (var i = 0; i < DIMS.length; i++) {
     if (DIMS[i].key === 'humidity' && inp.humidity === '不限') continue;
+    if (DIMS[i].key === 'budget' && inp.budgetMode === 'none') continue;   // 不限预算 → 该维度权重归零
     totalWeight += DIMS[i].weight;
   }
   var rows = [];
@@ -2244,6 +2436,7 @@ function scoreAll(inp) {
     var weighted = 0;
     for (var d = 0; d < DIMS.length; d++) {
       if (DIMS[d].key === 'humidity' && inp.humidity === '不限') continue;
+      if (DIMS[d].key === 'budget' && inp.budgetMode === 'none') continue;
       weighted += (parts[DIMS[d].key].score || 0) * DIMS[d].weight;
     }
     var total = totalWeight > 0 ? weighted / totalWeight * 100 : 0;
@@ -2256,6 +2449,11 @@ function scoreAll(inp) {
 function reasonText(key, r, inp) {
   var t = r.trip;
   if (key === 'budget') {
+    if (r.parts.budget.disabled) {
+      return '从' + t.originInfo.name + '出发（约 ' + t.km + ' 公里，按' +
+             (t.chosen.mode === 'train' ? '火车' : '飞机') + '计），全家总花费约 ' + fmtMoney(t.total) +
+             ' 元；你选了「不限预算」，花费不参与打分。';
+    }
     return '从' + t.originInfo.name + '出发（约 ' + t.km + ' 公里，按' +
            (t.chosen.mode === 'train' ? '火车' : '飞机') + '计），全家总花费约 ' + fmtMoney(t.total) + ' 元，贴合你的预算。';
   }
@@ -2376,6 +2574,54 @@ function isRateLimitError(err) {
   for (var i = 0; i < keys.length; i++) if (m.toUpperCase().indexOf(keys[i].toUpperCase()) >= 0) return true;
   return false;
 }
+
+/* ============================================================================
+   高德 Key 的本地保存
+   目的：手机上收起了 Key 输入框，但仍要能正常用真实数据 —— 所以把 Key 存在
+   浏览器本地存储里，下次打开自动读取并静默使用，不需要再看到输入框。
+   ============================================================================ */
+var KEY_STORE = 'xm_amap_key';
+
+function loadSavedKey() {
+  try { return localStorage.getItem(KEY_STORE) || ''; } catch (e) { return ''; }
+}
+function saveKey(k) {
+  try {
+    if (k) localStorage.setItem(KEY_STORE, k);
+    else localStorage.removeItem(KEY_STORE);
+  } catch (e) {}
+}
+/* 当前实际使用的 Key：优先用输入框里的，其次用本地保存的 */
+function effectiveKey() {
+  var el2 = el('amapKey');
+  var typed = el2 ? el2.value.trim() : '';
+  return typed || loadSavedKey();
+}
+/* 手机端胶囊的状态显示 */
+function updateKeyChip() {
+  var chip = el('keyChip'), text = el('keyChipText');
+  if (!chip || !text) return;
+  var k = effectiveKey();
+  if (k) {
+    chip.className = 'key-chip on';
+    text.textContent = '高德数据已开启';
+  } else {
+    chip.className = 'key-chip';
+    text.textContent = '填入高德 Key 可用真实数据';
+  }
+}
+/* 启动时：把保存过的 Key 回填到输入框，有 Key 就静默拉一次真实数据 */
+function initSavedKey() {
+  var box = el('amapKey');
+  if (!box) return;
+  var saved = loadSavedKey();
+  if (saved && !box.value.trim()) box.value = saved;
+  updateKeyChip();
+  if (saved) {
+    /* 静默使用：不需要用户再点按钮，也不会自动展开输入框 */
+    setTimeout(function () { loadRemote(scoreAll(readInputs())); }, 800);
+  }
+}
 async function apiCallWithRetry(label, callFn) {
   var attempt = 0, lastErr = null;
   while (attempt <= MAX_RETRY) {
@@ -2393,7 +2639,10 @@ async function apiCallWithRetry(label, callFn) {
   throw lastErr;
 }
 async function loadRemote(topRows) {
-  var key = el('amapKey').value.trim();
+  /* 手机上输入框被收起，这里用「输入框内容 → 本地保存的 Key」的顺序取 */
+  var key = effectiveKey();
+  var box = el('amapKey');
+  if (box && !box.value.trim() && key) box.value = key;
   var myToken = ++LOAD_TOKEN;
   REMOTE = {}; API_CALLS = 0; API_MSG = ''; API_DEGRADED = [];
   if (!key) {
@@ -2616,7 +2865,7 @@ function render(rows) {
   el('resultCount').textContent = '共 ' + rows.length + ' 个（上限 ' + MAX_RESULTS + ' 个）';
   el('caliberNote').textContent = '出发地：' + resolveOrigin(inp.origin).name +
     '　出行方式：' + (inp.transport === 'auto' ? '火车 / 飞机都看' : (inp.transport === 'train' ? '只看火车' : '只看飞机')) +
-    '　预算：' + (inp.budgetMode === 'total' ? '总预算 ' : '人均预算 ') + inp.budget + ' ' + inp.currency +
+    '　预算：' + budgetLabel(inp) +
     '　' + heads + ' 人　' + tripDays(inp.start, inp.end) + ' 天';
   el('tripDaysNote').textContent = '行程天数：' + tripDays(inp.start, inp.end) + ' 天（自动计算，攻略最多按 5 天生成）';
 
@@ -2634,6 +2883,7 @@ function setStatus(kind, badgeText, statusText) {
   line.className = 'status-line' + (kind === 'err' ? ' warn' : '');
   line.textContent = statusText;
   el('apiBadge').textContent = '接口 ' + API_CALLS + ' 次';
+  updateKeyChip();   // 顺带同步手机端那个 Key 状态胶囊
 }
 
 /* ============================================================================
@@ -2879,9 +3129,9 @@ function buildGuide(cityName, r, inp) {
   }
 
   var monthT = 0, monthH = 0;
-  for (var m = 0; m < r.months.length; m++) {
-    monthT += c.normal[r.months[m] - 1];
-    monthH += c.humid[r.months[m] - 1];
+  for (var m2 = 0; m2 < r.months.length; m2++) {
+    monthT += c.normal[r.months[m2] - 1];
+    monthH += c.humid[r.months[m2] - 1];
   }
   monthT = monthT / r.months.length;
   monthH = monthH / r.months.length;
@@ -2897,14 +3147,14 @@ function buildGuide(cityName, r, inp) {
     return '<div class="foot-line"><span>' + label + '　<small class="muted">' + pct(v) + '%</small></span><b>' +
            fmtMoney(v) + ' 元</b></div>';
   }
-  var cap = (inp.budgetMode === 'perPerson')
-    ? inp.budget * (CURRENCY_RATE[inp.currency] || 1) * (inp.adults + inp.kids)
-    : inp.budget * (CURRENCY_RATE[inp.currency] || 1);
+  var bd = r.parts.budget;
   var budgetHtml = line4('① 交通（' + (t4.chosen.mode === 'train' ? '火车' : '飞机') + '）', t4.transport) +
                    line4('② 住宿', t4.hotel) + line4('③ 餐饮', t4.food) + line4('④ 活动', t4.act);
-  if (cap > 0) {
-    var diff = cap - sum4;
-    budgetHtml += '<div class="foot-line foot-total"><span>' + (diff >= 0 ? '预算结余' : '超出预算') +
+  if (bd && bd.disabled) {
+    budgetHtml += '<div class="foot-line foot-total"><span>预算</span><b>不限</b></div>';
+  } else if (bd && bd.cap > 0) {
+    var diff = bd.cap - sum4;
+    budgetHtml += '<div class="foot-line foot-total"><span>' + (diff >= 0 ? '预算结余' : '超出预算上限') +
                   '</span><b>' + fmtMoney(Math.abs(diff)) + ' 元</b></div>';
   }
 
@@ -2960,6 +3210,8 @@ function safeRecompute() {
 var remoteTimer = null;
 function onInputChange() {
   syncPickers();
+  updateBudgetHint();
+  updateKeyChip();
   if (!loadingCards) safeRecompute();
   if (el('amapKey').value.trim()) {
     clearTimeout(remoteTimer);
@@ -2967,7 +3219,7 @@ function onInputChange() {
   }
 }
 function bindEvents() {
-  var ids = ['inOrigin','inAdults','inKids','inBudget','inDateStart','inDateEnd'];
+  var ids = ['inOrigin','inAdults','inKids','inBudgetMin','inBudgetMax','inDateStart','inDateEnd'];
   for (var i = 0; i < ids.length; i++) {
     var n = el(ids[i]);
     if (n) n.addEventListener('input', onInputChange);
@@ -2997,7 +3249,34 @@ function bindEvents() {
     el('moreIcon').textContent = collapsed ? '▾' : '▸';
   });
 
-  el('applyKey').addEventListener('click', function () { loadRemote(scoreAll(readInputs())); });
+  el('applyKey').addEventListener('click', function () {
+    saveKey(el('amapKey').value.trim());   // 记住 Key，之后手机上不用再填
+    updateKeyChip();
+    loadRemote(scoreAll(readInputs()));
+  });
+
+  /* 手机端：点胶囊展开 / 收起 Key 输入区 */
+  var chip = el('keyChip');
+  if (chip) {
+    chip.addEventListener('click', function () {
+      var box = document.querySelector('.key-box');
+      if (!box) return;
+      var expanded = box.className.indexOf('expanded') >= 0;
+      box.className = expanded ? 'key-box' : 'key-box expanded';
+      if (!expanded) {
+        var inp = el('amapKey');
+        if (inp) inp.focus();
+      }
+    });
+  }
+  /* 手动改了 Key 就一起存下来 */
+  var keyInput = el('amapKey');
+  if (keyInput) {
+    keyInput.addEventListener('change', function () {
+      saveKey(this.value.trim());
+      updateKeyChip();
+    });
+  }
   el('resetAll').addEventListener('click', function () { applyProfile('A'); onInputChange(); });
 
   el('panelToggle').addEventListener('click', function () {
@@ -3006,6 +3285,24 @@ function bindEvents() {
     panel.className = collapsed ? 'panel' : 'panel collapsed';
     el('panelToggleIcon').textContent = collapsed ? '▾' : '▸';
   });
+
+  /* 手机端吸底操作条：完成后收起面板、回到推荐结果并同步底部标签高亮 */
+  var doneBtn = el('panelDone');
+  if (doneBtn) {
+    doneBtn.addEventListener('click', function () {
+      var panel = el('panel');
+      if (panel) panel.className = 'panel collapsed';
+      var icon = el('panelToggleIcon');
+      if (icon) icon.textContent = '▸';
+      setActiveTab('reco');
+      var rc = document.querySelector('.results-head') || el('cards');
+      if (rc && rc.scrollIntoView) rc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+  var resetBtn2 = el('panelReset');
+  if (resetBtn2) {
+    resetBtn2.addEventListener('click', function () { applyProfile('A'); onInputChange(); });
+  }
 
   /* 视频区声音开关 */
   el('soundBtn').addEventListener('click', toggleSound);
@@ -3033,6 +3330,43 @@ function bindEvents() {
   document.addEventListener('keydown', function (e) {
     if (e.key === 'Escape' || e.keyCode === 27) hideModals();
   });
+
+  /* ---------- 底部标签栏（App 形态，仅手机端可见） ---------- */
+  var tabs = document.querySelectorAll('.tabbar .tb-item');
+  for (var t = 0; t < tabs.length; t++) {
+    tabs[t].addEventListener('click', function () {
+      var which = this.getAttribute('data-tab');
+      setActiveTab(which);
+      hideModals();
+      if (which === 'top') {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        return;
+      }
+      if (which === 'reco') {
+        var rc = document.querySelector('.results-head') || el('cards');
+        if (rc && rc.scrollIntoView) rc.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      /* 「条件」：手机上默认折叠，点一下展开并滚过去 */
+      var panel = el('panel');
+      var toggle = el('panelToggle');
+      if (panel && panel.className.indexOf('collapsed') >= 0) {
+        panel.className = 'panel';
+        var icon = el('panelToggleIcon');
+        if (icon) icon.textContent = '▾';
+      }
+      if (toggle && toggle.scrollIntoView) toggle.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  }
+}
+
+/* 同步底部标签栏的选中态 */
+function setActiveTab(which) {
+  var tabs = document.querySelectorAll('.tabbar .tb-item');
+  for (var i = 0; i < tabs.length; i++) {
+    var on = (tabs[i].getAttribute('data-tab') === which);
+    tabs[i].className = on ? 'tb-item on' : 'tb-item';
+  }
 }
 
 /* ============================================================================
@@ -3152,23 +3486,38 @@ function initPWA() {
    ============================================================================ */
 (function init() {
   var boot = el('boot');
+  var hasSavedKey = !!loadSavedKey();   // 之前填过 Key（手机端会静默使用它）
   try {
     initHero();          // 视频 / 降级判定
     refreshSoundUI();
     bindEvents();
     applyProfile('A');
     syncPickers();
+    updateBudgetHint();
+    /* 手机端：输入面板默认折叠，让首屏直接看到推荐结果 */
+    if (window.innerWidth <= 1080) {
+      var pnl = el('panel');
+      if (pnl) pnl.className = 'panel collapsed';
+      var picon = el('panelToggleIcon');
+      if (picon) picon.textContent = '▸';
+    }
     render(scoreAll(readInputs()));
-    setStatus('mock', '示例数据',
-      '小满出行已就绪。填入高德 Web 服务 Key 并点「应用并拉取真实数据」，即可用真实天气与 POI 参与推荐：' +
-      '串行请求 18 次，每次间隔 ' + REQ_GAP_MS + 'ms 以规避 QPS 限制，失败按 400 → 800ms 退避重试 ' + MAX_RETRY + ' 次。');
+    if (hasSavedKey) {
+      setStatus('real', '正在获取真实数据…',
+        '已使用上次保存的高德 Key，正在串行请求天气与 POI，请稍候。');
+    } else {
+      setStatus('mock', '示例数据',
+        '小满出行已就绪。填入高德 Web 服务 Key 并点「应用并拉取真实数据」，即可用真实天气与 POI 参与推荐：' +
+        '串行请求 18 次，每次间隔 ' + REQ_GAP_MS + 'ms 以规避 QPS 限制，失败按 400 → 800ms 退避重试 ' + MAX_RETRY + ' 次。');
+    }
   } catch (err) {
     boot.className = '';
     boot.style.display = 'block';
     boot.textContent = '启动失败：' + (err && err.name) + ' —— ' + (err && err.message) +
       '　位置：' + ((err && err.stack) ? String(err.stack).split('\n').slice(0, 3).join(' / ') : '未知');
   }
-  initPWA();   // Service Worker 注册与「添加到主屏幕」提示，失败也不影响页面
+  initPWA();        // Service Worker 注册与「添加到主屏幕」提示，失败也不影响页面
+  initSavedKey();   // 读取本地保存的 Key，有就静默拉一次真实数据
 })();
 </script>
 </body>
