@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>检查素材 · 小满出行</title>
+<style>
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #FAF7F2; color: #3D3D3D;
+         margin: 0; padding: 28px; font-size: 14px; line-height: 1.7; }
+  .box { max-width: 780px; margin: 0 auto; }
+  h1 { font-size: 20px; margin-bottom: 6px; }
+  h2 { font-size: 15px; margin: 26px 0 10px; padding-bottom: 6px; border-bottom: 1px solid #EDE7DE; }
+  .card { background: #fff; border-radius: 16px; padding: 18px 20px; box-shadow: 0 4px 20px rgba(0,0,0,.06); margin-bottom: 16px; }
+  .row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+  .tag { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px; }
+  .ok { background: #EDF2EA; color: #5E7358; }
+  .bad { background: #F7EDEA; color: #A8776A; }
+  .wait { background: #EDF1F5; color: #5C7189; }
+  code { background: #F3EDE4; padding: 2px 8px; border-radius: 6px; font-size: 12.5px; }
+  video { width: 100%; max-height: 220px; border-radius: 12px; background: #F3EDE4; }
+  audio { width: 100%; margin-top: 8px; }
+  .note { font-size: 12.5px; color: #9A9A9A; }
+  .step { background: #F3EDE4; border-radius: 12px; padding: 12px 16px; font-size: 13px; }
+  ol { padding-left: 20px; }
+</style>
+</head>
+<body>
+<div class="box">
+
+  <h1>素材检查 · 小满出行</h1>
+  <p class="note">
+    这个页面放在 <b>assets 文件夹内部</b>，所以它用最短路径直接读同目录下的两个文件
+    （<code>intro.mp4</code>、<code>bgm.mp3</code>）。它只做检查，不会修改任何文件。
+  </p>
+
+  <!-- ============ 视频检查 ============ -->
+  <h2>① 背景视频 <code>intro.mp4</code>（与本页同目录）</h2>
+  <div class="card">
+    <div class="row">
+      <span class="tag wait" id="videoTag">检查中…</span>
+      <span class="note" id="videoInfo"></span>
+    </div>
+    <video id="v" controls muted preload="metadata">
+      <source src="./intro.mp4" type="video/mp4">
+    </video>
+  </div>
+
+  <!-- ============ 音乐检查 ============ -->
+  <h2>② 背景音乐 <code>bgm.mp3</code>（与本页同目录）</h2>
+  <div class="card">
+    <div class="row">
+      <span class="tag wait" id="audioTag">检查中…</span>
+      <span class="note" id="audioInfo"></span>
+    </div>
+    <audio id="a" controls preload="metadata" loop>
+      <source src="./bgm.mp3" type="audio/mpeg">
+    </audio>
+  </div>
+
+  <!-- ============ 手动挑选：验证你手上的文件本身是否可播 ============ -->
+  <h2>③ 如果你还没把文件放进 assets，先在这里试一下</h2>
+  <div class="card">
+    <p class="note" style="margin-top:0">
+      选一个你电脑里的视频或音乐，只要这里能正常播放，说明文件本身没问题，放进 assets 并改成正确文件名就能用。
+    </p>
+    <div class="row">
+      <input type="file" id="pickVideo" accept="video/*">
+    </div>
+    <div class="row">
+      <input type="file" id="pickAudio" accept="audio/*">
+    </div>
+    <div class="step" id="pickResult">还没选择文件。</div>
+  </div>
+
+  <h2>怎么用</h2>
+  <div class="card">
+    <ol>
+      <li>如果 ①② 都显示绿色「可播放」→ 素材已经就位，直接打开上一层的 <code>小满出行.html</code> 即可。</li>
+      <li>如果显示红色「加载失败」→ 说明文件不在这个文件夹里，或者文件名/扩展名不对。</li>
+      <li>用 ③ 验证你手上的原始文件能不能播：能播但 ①② 失败，就是<b>放错位置或改名不对</b>。</li>
+      <li>如果 ③ 也播不了 → 文件本身格式浏览器不支持，需要换素材或转码。</li>
+      <li>本页和 <code>直接测试视频.html</code> 作用相同，任选一个验证即可。</li>
+    </ol>
+  </div>
+
+</div>
+
+<script>
+/* ---------- 视频 / 音频状态检查 ---------- */
+function watch(mediaEl, tagId, infoId, label) {
+  var tag = document.getElementById(tagId);
+  var info = document.getElementById(infoId);
+  var settled = false;
+  function ok() {
+    if (settled) return; settled = true;
+    tag.className = 'tag ok';
+    tag.textContent = '✓ 可播放';
+    var d = mediaEl.duration;
+    info.textContent = isFinite(d) ? ('时长约 ' + d.toFixed(1) + ' 秒') : '';
+  }
+  function bad(why) {
+    if (settled) return; settled = true;
+    tag.className = 'tag bad';
+    tag.textContent = '✕ 加载失败';
+    info.textContent = label + '：' + why;
+  }
+  mediaEl.addEventListener('loadeddata', ok);
+  mediaEl.addEventListener('loadedmetadata', ok);
+  mediaEl.addEventListener('error', function () {
+    var e = mediaEl.error;
+    var map = {
+      1: '加载被中断（ABORTED）',
+      2: '网络错误（NETWORK）',
+      3: '解码失败，格式可能不被支持（DECODE）',
+      4: '文件不存在或无法读取（SRC_NOT_SUPPORTED）'
+    };
+    bad(e && map[e.code] ? map[e.code] : '文件不存在或格式不支持');
+  });
+  /* 4 秒后还没动静，按失败处理（file:// 下取不到文件通常就是这种情况） */
+  setTimeout(function () {
+    if (!settled) bad('4 秒内没有任何数据（通常是文件不存在，或路径不对）');
+  }, 4000);
+}
+watch(document.getElementById('v'), 'videoTag', 'videoInfo', '视频');
+watch(document.getElementById('a'), 'audioTag', 'audioInfo', '音频');
+
+/* ---------- 手动挑选文件验证 ---------- */
+var pickedVideo = null, pickedAudio = null, pickedVideoUrl = null, pickedAudioUrl = null;
+function describe(file) {
+  var mb = (file.size / 1024 / 1024).toFixed(2);
+  return file.name + '（' + mb + ' MB，类型：' + (file.type || '浏览器未识别') + '）';
+}
+function refresh() {
+  var out = document.getElementById('pickResult');
+  var lines = [];
+  if (pickedVideo) lines.push('视频：' + describe(pickedVideo));
+  if (pickedAudio) lines.push('音频：' + describe(pickedAudio));
+  out.innerHTML = lines.length ? lines.join('<br>') + '<br><span class="note">下面能播就说明文件没问题。</span>' : '还没选择文件。';
+}
+
+document.getElementById('pickVideo').addEventListener('change', function (e) {
+  var f = e.target.files && e.target.files[0];
+  if (!f) return;
+  pickedVideo = f;
+  if (pickedVideoUrl) URL.revokeObjectURL(pickedVideoUrl);
+  pickedVideoUrl = URL.createObjectURL(f);
+  var v = document.getElementById('v');
+  v.src = pickedVideoUrl;
+  v.load();
+  var tag = document.getElementById('videoTag');
+  tag.className = 'tag wait'; tag.textContent = '测试选中文件…';
+  document.getElementById('videoInfo').textContent = '（当前播放的是你刚选的文件，不是 assets 里的）';
+  settledReset();
+  refresh();
+});
+
+document.getElementById('pickAudio').addEventListener('change', function (e) {
+  var f = e.target.files && e.target.files[0];
+  if (!f) return;
+  pickedAudio = f;
+  if (pickedAudioUrl) URL.revokeObjectURL(pickedAudioUrl);
+  pickedAudioUrl = URL.createObjectURL(f);
+  var a = document.getElementById('a');
+  a.src = pickedAudioUrl;
+  a.load();
+  var tag = document.getElementById('audioTag');
+  tag.className = 'tag wait'; tag.textContent = '测试选中文件…';
+  document.getElementById('audioInfo').textContent = '（当前播放的是你刚选的文件，不是 assets 里的）';
+  refresh();
+});
+
+/* 让手动选择后的状态能重新判定（简化处理：页面会因 load() 重新触发 loadeddata/error） */
+function settledReset() {
+  /* 直接替换 src 后浏览器会重新触发事件，这里不需要额外处理 */
+}
+</script>
+</body>
+</html>

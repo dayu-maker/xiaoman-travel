@@ -1,0 +1,3175 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>小满出行 · 为全家找到刚刚好的那趟旅行</title>
+
+<!-- ============ PWA：可添加到主屏幕 ============ -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#B5C4B1">
+<meta name="description" content="根据预算、住宿、松弛感与出行日期的气候，为有孩子的家庭推荐国内目的地并生成行程。">
+<!-- iOS 专用：全屏显示 + 状态栏样式 + 主屏图标 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="小满出行">
+<link rel="apple-touch-icon" href="./assets/icon.svg">
+<link rel="icon" type="image/svg+xml" href="./assets/icon.svg">
+<!-- 安卓 / 桌面 Chrome 的窗口配色 -->
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+/* ============================================================================
+   小满出行 · 设计规范（沿用第四阶段 ins 风 / 低饱和莫兰迪）
+   主色：豆沙绿 #B5C4B1　辅色：雾霾蓝 #A8B8C8　强调：藕粉 #D4A59A
+   背景：浅奶油 #FAF7F2　文字：深灰 #3D3D3D
+   ============================================================================ */
+:root {
+  --green:        #B5C4B1;
+  --green-deep:   #8FA388;
+  --green-soft:   #EDF2EA;
+  --blue:         #A8B8C8;
+  --blue-soft:    #EDF1F5;
+  --blush:        #D4A59A;
+  --blush-deep:   #C08C80;
+  --blush-soft:   #F7EDEA;
+  --cream:        #FAF7F2;
+  --cream-deep:   #F3EDE4;
+  --card:         #FFFFFF;
+  --ink:          #3D3D3D;
+  --ink-2:        #6B6B6B;
+  --ink-3:        #9A9A9A;
+  --line:         #EDE7DE;
+  --radius-card:  20px;
+  --radius-sm:    14px;
+  --radius-pill:  24px;
+  --shadow:       0 4px 20px rgba(0, 0, 0, 0.06);
+  --shadow-hover: 0 10px 30px rgba(0, 0, 0, 0.10);
+  --ease:         cubic-bezier(.22, .61, .36, 1);
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; padding: 0; }
+body {
+  background: var(--cream); color: var(--ink);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC",
+               "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  font-size: 14px; line-height: 1.65; -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: .2px; }
+button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+.wrap { max-width: 1360px; margin: 0 auto; padding: 0 24px 80px; }
+.muted { color: var(--ink-3); font-size: 12.5px; }
+.sub, .list li .sub, .slot-body .sub, .dtable td .sub {
+  display: block; font-size: 11.5px; color: var(--ink-3); line-height: 1.55; margin-top: 2px;
+}
+.hidden { display: none !important; }
+
+/* ---------- 顶栏（名称：小满出行） ---------- */
+.topbar {
+  position: sticky; top: 0; z-index: 60;
+  background: rgba(250, 247, 242, .9); backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line); padding: 14px 0;
+}
+.topbar-inner {
+  max-width: 1360px; margin: 0 auto; padding: 0 24px;
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+}
+.brand { display: flex; align-items: center; gap: 11px; }
+.brand-mark {
+  width: 40px; height: 40px; border-radius: 14px; flex: 0 0 40px;
+  background: linear-gradient(140deg, var(--green) 0%, var(--blue) 100%);
+  display: flex; align-items: center; justify-content: center; font-size: 19px;
+  box-shadow: var(--shadow);
+}
+.brand-title { font-size: 17px; font-weight: 700; letter-spacing: 1px; }
+.brand-sub { font-size: 11.5px; color: var(--ink-3); }
+.key-box { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.key-input {
+  width: 250px; padding: 9px 16px; font-size: 12.5px; font-family: inherit;
+  border: 1px solid var(--line); border-radius: var(--radius-pill);
+  background: #fff; color: var(--ink); transition: border-color .2s var(--ease);
+}
+.key-input::placeholder { color: var(--ink-3); }
+.key-input:focus { outline: none; border-color: var(--green); }
+.badge {
+  display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px;
+  padding: 5px 13px; border-radius: var(--radius-pill); font-weight: 500;
+}
+.badge.mock { background: var(--cream-deep); color: var(--ink-2); }
+.badge.real { background: var(--green-soft); color: #5E7358; }
+.badge.err  { background: var(--blush-soft); color: var(--blush-deep); }
+.status-line { flex: 1 1 100%; font-size: 12px; color: var(--ink-3); }
+.status-line.warn { color: var(--blush-deep); }
+
+.btn {
+  padding: 10px 22px; border-radius: var(--radius-pill); font-size: 13px; font-weight: 500;
+  transition: transform .18s var(--ease), background .18s var(--ease), box-shadow .18s var(--ease);
+}
+.btn:active { transform: scale(.96); }
+.btn-fill { background: var(--blush); color: #fff; box-shadow: 0 4px 14px rgba(212, 165, 154, .35); }
+.btn-fill:hover { background: var(--blush-deep); box-shadow: 0 6px 20px rgba(212, 165, 154, .45); }
+.btn-line { background: #fff; border: 1px solid var(--line); color: var(--ink-2); }
+.btn-line:hover { border-color: var(--green); color: var(--green-deep); }
+.btn-soft { background: var(--green-soft); color: #5E7358; }
+.btn-soft:hover { background: #E2EBDE; }
+
+/* ============================================================================
+   【视频区】主页介绍区：本地视频背景 + 遮罩 + 静音按钮
+   视频不存在时自动降级为「CSS 动态主视觉」（见下方 fallback 样式）
+   ============================================================================ */
+.hero {
+  position: relative; margin: 26px 0; border-radius: var(--radius-card);
+  overflow: hidden; box-shadow: var(--shadow);
+  height: 280px;                       /* 桌面端 280px，移动端 200px */
+  background: linear-gradient(135deg, #E8DED0 0%, var(--green) 50%, var(--blue) 100%);
+}
+/* 视频层：铺满容器并裁掉多余部分（不变形、不留白），容器圆角靠 overflow:hidden 裁剪
+   opacity 过渡用于「视频 → 卡通动图」的交叉淡化 */
+.hero-video {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover;
+  display: block; z-index: 2;
+  opacity: 1; transition: opacity 1.2s ease;
+}
+.hero-video.fading { opacity: 0; }
+.hero-video.gone { display: none; }
+
+/* -------------- 介绍图层：视频播放结束后淡入，循环播放卡通动图 -------------- */
+.hero-image {
+  position: absolute; inset: 0; z-index: 2; overflow: hidden;
+  opacity: 0; transition: opacity 1.2s ease;   /* 与视频淡出同时进行，形成交叉淡化 */
+  background: linear-gradient(150deg, #CFDCC9 0%, var(--green) 45%, var(--blue) 100%);
+}
+.hero-image.show { opacity: 1; }
+.hero-image-img {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  object-fit: cover; display: block;
+}
+/* 卡通动图：铺满容器，按 slice 裁切，保证任何宽高比都填满 */
+.hero-cartoon {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block;
+}
+.hero-image-caption {
+  position: absolute; right: 24px; top: 22px; z-index: 3;
+  font-size: 12.5px; color: #fff; letter-spacing: .3px;
+  background: rgba(46, 54, 46, .38); padding: 7px 15px; border-radius: var(--radius-pill);
+  backdrop-filter: blur(4px); max-width: 60%;
+}
+
+/* ---------------- 卡通动图的动画（全部是纯 CSS，无外部依赖） ---------------- */
+.hero-cartoon .cartoon-clouds { animation: cClouds 44s linear infinite; }
+@keyframes cClouds { from { transform: translateX(0); } to { transform: translateX(-320px); } }
+.hero-cartoon .cartoon-land { animation: cLand 26s linear infinite; }
+@keyframes cLand { from { transform: translateX(0); } to { transform: translateX(-320px); } }
+.hero-cartoon .cartoon-car { animation: cCar 14s linear infinite; }
+@keyframes cCar { from { transform: translateX(-130px); } to { transform: translateX(925px); } }
+.hero-cartoon .cartoon-ray,
+.hero-cartoon .cartoon-balloon,
+.hero-cartoon .cartoon-wheel {
+  transform-box: fill-box; transform-origin: center;
+}
+.hero-cartoon .cartoon-ray { animation: cRay 46s linear infinite; }
+@keyframes cRay { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.hero-cartoon .cartoon-balloon { animation: cFloat 5s ease-in-out infinite; }
+.hero-cartoon .cartoon-balloon.b2 { animation-duration: 6.4s; animation-delay: .8s; }
+.hero-cartoon .cartoon-balloon.b3 { animation-duration: 7.2s; animation-delay: 1.6s; }
+/* 热气球：比云慢，制造远近层次 */
+.hero-cartoon .cartoon-hotair { animation: cHotair 70s linear infinite; }
+@keyframes cHotair { from { transform: translateX(0); } to { transform: translateX(-320px); } }
+.hero-cartoon .cartoon-arm { animation: cWave 1.6s ease-in-out infinite; }
+@keyframes cWave { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(14deg); } }
+@keyframes cFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-11px); }
+}
+.hero-cartoon .cartoon-wheel { animation: cSpin 1.1s linear infinite; }
+@keyframes cSpin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+/* 尊重系统的「减弱动态效果」设置 */
+@media (prefers-reduced-motion: reduce) {
+  .hero-cartoon .cartoon-clouds,
+  .hero-cartoon .cartoon-land,
+  .hero-cartoon .cartoon-car,
+  .hero-cartoon .cartoon-ray,
+  .hero-cartoon .cartoon-balloon,
+  .hero-cartoon .cartoon-wheel,
+  .hero-cartoon .cartoon-hotair,
+  .hero-cartoon .cartoon-arm { animation: none; }
+}
+
+/* 文字遮罩 1：深色 38%（视频与介绍图共用，保证白字可读） */
+.hero-mask {
+  position: absolute; inset: 0; z-index: 3;
+  background: rgba(38, 44, 38, .38);
+}
+/* 文字遮罩 2：底部渐深，保证左下角文字在任何画面下都清晰 */
+.hero-scrim {
+  position: absolute; inset: 0; z-index: 3;
+  background: linear-gradient(to top,
+              rgba(30, 36, 30, .52) 0%,
+              rgba(30, 36, 30, .26) 34%,
+              rgba(30, 36, 30, .04) 62%,
+              transparent 100%);
+}
+.hero-inner {
+  position: relative; z-index: 4; height: 100%;
+  display: flex; flex-direction: column; justify-content: flex-end;
+  padding: 0 44px 38px; color: #fff; max-width: 720px;
+}
+.hero-title {
+  font-size: 40px; font-weight: 800; letter-spacing: 4px; line-height: 1.15;
+  text-shadow: 0 2px 16px rgba(30, 36, 30, .45); margin-bottom: 8px;
+}
+.hero-slogan {
+  font-size: 16px; font-weight: 400; letter-spacing: .6px;
+  text-shadow: 0 1px 12px rgba(30, 36, 30, .42); margin-bottom: 14px;
+}
+.hero-tags { display: flex; gap: 9px; flex-wrap: wrap; padding-right: 76px; }
+.hero-tag {
+  font-size: 12px; color: #fff; background: rgba(255, 255, 255, .22);
+  border: 1px solid rgba(255, 255, 255, .35);
+  padding: 6px 15px; border-radius: var(--radius-pill); backdrop-filter: blur(4px);
+}
+/* 静音 / 有声切换按钮（右下角圆形） */
+.sound-btn {
+  position: absolute; right: 18px; bottom: 18px; z-index: 3;
+  width: 46px; height: 46px; border-radius: 50%;
+  background: rgba(255, 255, 255, .88); color: var(--ink-2);
+  font-size: 19px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 4px 16px rgba(60, 70, 60, .22);
+  transition: transform .2s var(--ease), background .2s var(--ease);
+}
+.sound-btn:hover { transform: scale(1.08); background: #fff; }
+.sound-btn:active { transform: scale(.94); }
+.sound-hint {
+  position: absolute; right: 74px; bottom: 30px; z-index: 3;
+  font-size: 11.5px; color: #fff; background: rgba(70, 80, 70, .32);
+  padding: 4px 12px; border-radius: var(--radius-pill);
+  opacity: 0; transition: opacity .25s var(--ease); pointer-events: none;
+}
+.sound-btn:hover + .sound-hint, .hero:hover .sound-hint { opacity: 1; }
+
+/* -------------- 视频降级：CSS 动态主视觉（奶杏 → 雾霾蓝缓慢流动） -------------- */
+.hero-fallback {
+  position: absolute; inset: 0; z-index: 1; overflow: hidden;
+  background: linear-gradient(120deg, #F5EDE4 0%, #E8E4D5 30%, var(--blue) 70%, #C6D2DC 100%);
+  background-size: 300% 300%;
+  animation: flowBg 18s ease-in-out infinite;
+}
+@keyframes flowBg {
+  0%   { background-position: 0% 50%; }
+  50%  { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+/* 浮动图标：3 秒一次上下浮动 */
+.hero-fallback .hf-icon {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  font-size: 74px; filter: drop-shadow(0 8px 22px rgba(80, 90, 80, .22));
+  animation: floatY 3s ease-in-out infinite;
+}
+@keyframes floatY {
+  0%, 100% { transform: translate(-50%, -50%); }
+  50%      { transform: translate(-50%, calc(-50% - 14px)); }
+}
+/* 柔和光斑：缓慢移动，营造「视频感」 */
+.hero-fallback .hf-orb {
+  position: absolute; border-radius: 50%; filter: blur(28px); opacity: .5;
+}
+.hero-fallback .orb-1 {
+  width: 200px; height: 200px; left: 8%; top: -30px;
+  background: radial-gradient(circle, rgba(212, 165, 154, .75), transparent 70%);
+  animation: drift1 14s ease-in-out infinite;
+}
+.hero-fallback .orb-2 {
+  width: 260px; height: 260px; right: 6%; bottom: -70px;
+  background: radial-gradient(circle, rgba(168, 184, 200, .8), transparent 70%);
+  animation: drift2 17s ease-in-out infinite;
+}
+.hero-fallback .orb-3 {
+  width: 160px; height: 160px; left: 44%; bottom: 10%;
+  background: radial-gradient(circle, rgba(181, 196, 177, .7), transparent 70%);
+  animation: drift3 20s ease-in-out infinite;
+}
+@keyframes drift1 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(34px, 26px); } }
+@keyframes drift2 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(-40px, -22px); } }
+@keyframes drift3 { 0%,100% { transform: translate(0,0); } 50% { transform: translate(22px, -30px); } }
+
+/* ---------- 主体布局 ---------- */
+.layout { display: grid; grid-template-columns: 380px minmax(0, 1fr); gap: 26px; align-items: start; }
+.panel {
+  background: var(--card); border-radius: var(--radius-card); box-shadow: var(--shadow);
+  padding: 22px; position: sticky; top: 92px;
+  max-height: calc(100vh - 118px); overflow-y: auto; scrollbar-width: thin;
+}
+.panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+.panel-head h2 { font-size: 16.5px; }
+.panel-toggle { display: none; }
+
+.fieldset { padding-top: 20px; margin-top: 20px; border-top: 1px solid var(--line); }
+.fieldset:first-of-type { padding-top: 0; margin-top: 0; border-top: none; }
+.legend { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 12px; }
+.legend .num {
+  width: 22px; height: 22px; border-radius: 8px; flex: 0 0 22px;
+  background: var(--green-soft); color: #5E7358; font-size: 11.5px;
+  display: flex; align-items: center; justify-content: center;
+}
+.legend .opt { font-size: 11px; font-weight: 400; color: var(--ink-3); }
+.legend .req { font-size: 10.5px; font-weight: 500; color: var(--blush-deep); background: var(--blush-soft); padding: 2px 9px; border-radius: var(--radius-pill); }
+
+.input {
+  width: 100%; padding: 11px 16px; font-size: 13.5px; font-family: inherit;
+  border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: #fff; color: var(--ink); transition: border-color .2s var(--ease), background .2s var(--ease);
+}
+.input::placeholder { color: var(--ink-3); }
+.input:focus { outline: none; border-color: var(--green); background: #FCFEFB; }
+.field { margin-bottom: 12px; }
+.field > label { display: block; font-size: 12px; color: var(--ink-2); margin-bottom: 6px; }
+.row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+/* 画像卡片（emoji + 一句话描述） */
+.profiles { display: flex; flex-direction: column; gap: 10px; }
+.profile-btn {
+  display: flex; align-items: center; gap: 12px; text-align: left;
+  background: var(--cream); border: 1.5px solid transparent;
+  border-radius: var(--radius-sm); padding: 12px 14px;
+  transition: all .2s var(--ease);
+}
+.profile-btn .p-ico { font-size: 24px; flex: 0 0 24px; }
+.profile-btn .p-main { flex: 1; }
+.profile-btn .p-title { font-size: 13px; font-weight: 600; color: var(--ink-2); }
+.profile-btn .p-desc { font-size: 11.5px; color: var(--ink-3); margin-top: 1px; }
+.profile-btn:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.profile-btn.active { background: var(--green-soft); border-color: var(--green); }
+.profile-btn.active .p-title { color: #55704E; }
+.profile-desc {
+  margin-top: 12px; font-size: 12px; color: var(--ink-2);
+  background: var(--cream); border-radius: var(--radius-sm); padding: 10px 14px; line-height: 1.6;
+}
+
+/* ============================================================================
+   【输入折叠】「更多偏好（可选）」折叠区
+   ============================================================================ */
+.more-toggle {
+  width: 100%; display: flex; align-items: center; justify-content: space-between;
+  background: var(--cream); border: 1px solid var(--line); border-radius: var(--radius-sm);
+  padding: 13px 16px; font-size: 13.5px; font-weight: 600; color: var(--ink-2);
+  transition: all .2s var(--ease); margin-top: 20px;
+}
+.more-toggle:hover { border-color: var(--green); color: var(--green-deep); }
+.more-toggle .mt-right { font-size: 11.5px; font-weight: 400; color: var(--ink-3); display: flex; align-items: center; gap: 8px; }
+.more-body { padding-top: 4px; }
+.more-body.collapsed { display: none; }
+
+/* ---------- 选择卡片 ---------- */
+.picker { display: flex; flex-wrap: wrap; gap: 10px; }
+.pick {
+  flex: 1 1 96px; min-width: 88px; text-align: center; cursor: pointer;
+  background: #fff; border: 1.5px solid var(--line); border-radius: var(--radius-sm);
+  padding: 12px 8px 10px; transition: all .2s var(--ease);
+  display: flex; flex-direction: column; align-items: center; gap: 5px;
+}
+.pick:hover { transform: translateY(-2px); box-shadow: var(--shadow); border-color: #E3DCD1; }
+.pick input { display: none; }
+.pick .ico { font-size: 21px; line-height: 1; }
+.pick .txt { font-size: 12.5px; font-weight: 500; color: var(--ink-2); line-height: 1.35; }
+.pick .sub { font-size: 10.5px; color: var(--ink-3); }
+.pick.on { background: var(--green-soft); border-color: var(--green-deep); box-shadow: 0 6px 18px rgba(143, 163, 136, .18); }
+.pick.on .txt { color: #55704E; font-weight: 600; }
+.pick.on .sub { color: #7A9073; }
+.picker.blush .pick.on { background: var(--blush-soft); border-color: var(--blush); box-shadow: 0 6px 18px rgba(212, 165, 154, .2); }
+.picker.blush .pick.on .txt { color: #A8776A; }
+
+/* ============================================================================
+   【卡片分层】推荐卡片：默认只显示图位 / 名称 / 匹配分 / 一句话理由 / 价格区间
+   ============================================================================ */
+.results-head { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; margin-bottom: 6px; }
+.results-head h2 { font-size: 21px; }
+.caliber { font-size: 12.5px; color: var(--ink-3); margin-bottom: 20px; line-height: 1.7; }
+.cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(330px, 1fr)); gap: 22px; }
+
+.reco {
+  background: var(--card); border-radius: var(--radius-card); box-shadow: var(--shadow);
+  overflow: hidden; display: flex; flex-direction: column;
+  transition: transform .22s var(--ease), box-shadow .22s var(--ease);
+  animation: rise .4s var(--ease) both;
+}
+.reco:hover { transform: translateY(-4px); box-shadow: var(--shadow-hover); }
+@keyframes rise { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.reco-visual {
+  height: 134px; position: relative; overflow: hidden;
+  display: flex; align-items: center; justify-content: center;
+}
+/* 城市地标插画：铺满图位，作为「没有照片」时的默认背景 */
+.reco-scene {
+  position: absolute; inset: 0; width: 100%; height: 100%; display: block; z-index: 0;
+}
+/* 插画上压一层很淡的暖色，让 18 张卡片色调统一、也更衬白字 */
+.reco-scene-tint {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(140deg, rgba(250, 247, 242, .10), rgba(212, 165, 154, .12));
+}
+/* 城市实景图：放在 assets/城市图/<城市名>.jpg（也支持 .jpeg/.png/.webp）
+   有图时自动铺满图位并压一层淡色蒙版；没图就用地标插画 */
+.reco-photo {
+  position: absolute; inset: 0; z-index: 0;
+  background-size: cover; background-position: center;
+  animation: photoIn .6s ease both;
+}
+@keyframes photoIn { from { opacity: 0; } to { opacity: 1; } }
+.reco-tint {
+  position: absolute; inset: 0; z-index: 1;
+  background: linear-gradient(140deg, rgba(181, 196, 177, .40), rgba(168, 184, 200, .34));
+}
+.reco-visual .rv-icon { position: relative; z-index: 2; font-size: 46px; filter: drop-shadow(0 3px 8px rgba(0, 0, 0, .12)); }
+.reco-visual .rv-note {
+  position: absolute; left: 14px; bottom: 12px; font-size: 11px; color: #fff;
+  background: rgba(90, 100, 90, .26); padding: 4px 12px; border-radius: var(--radius-pill);
+  backdrop-filter: blur(4px); z-index: 2;
+}
+.match-badge {
+  position: absolute; right: 14px; top: 14px; z-index: 3;
+  background: rgba(255, 255, 255, .93); border-radius: 16px;
+  padding: 7px 14px 6px; text-align: center; box-shadow: 0 4px 14px rgba(0, 0, 0, .12);
+}
+/* 有实景图时，图标缩小成左上角圆角标签，不再居中挡住照片 */
+.reco-visual.has-photo .rv-icon {
+  position: absolute; left: 14px; top: 12px; font-size: 20px;
+  background: rgba(255, 255, 255, .84); border-radius: 50%;
+  width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .14); filter: none;
+}
+.reco-visual.has-photo .rv-note { background: rgba(40, 48, 40, .42); }
+
+/* 用地标插画时：emoji 缩小并移到左上角，让插画成为主体 */
+.reco-visual.has-scene .rv-icon {
+  position: absolute; left: 12px; top: 10px; font-size: 19px;
+  background: rgba(255, 255, 255, .78); border-radius: 50%;
+  width: 34px; height: 34px; display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .12); filter: none;
+}
+.reco-visual.has-scene .rv-note { background: rgba(40, 48, 40, .34); }
+.match-badge b { display: block; font-size: 21px; line-height: 1; color: var(--green-deep); font-weight: 700; }
+.match-badge span { font-size: 10px; color: var(--ink-3); letter-spacing: .5px; }
+.reco-body { padding: 18px 20px 0; flex: 1; }
+.reco-title-row { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.reco-title { font-size: 19px; font-weight: 700; }
+.reco-prov { font-size: 12px; color: var(--ink-3); }
+.reco-reason {
+  margin-top: 10px; font-size: 13px; color: var(--ink-2);
+  background: var(--cream); border-radius: var(--radius-sm); padding: 11px 14px; line-height: 1.6;
+}
+/* 价格区间：默认展示的核心信息之一 */
+.price-row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; }
+.price-cell {
+  flex: 1 1 130px; background: #FEFDFC; border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm); padding: 11px 14px;
+}
+.price-cell .pc-label { font-size: 11px; color: var(--ink-3); }
+.price-cell .pc-value { font-size: 16px; font-weight: 700; color: var(--green-deep); margin-top: 2px; }
+.price-cell .pc-sub { font-size: 11px; color: var(--ink-3); margin-top: 2px; }
+.reco-teaser { margin-top: 12px; }
+
+.reco-actions {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 16px 20px 18px; margin-top: 18px; border-top: 1px solid var(--line);
+}
+.reco-actions .btn { padding: 10px 20px; }
+/* 「生成攻略」为次要按钮，放右下角 */
+.reco-actions .js-guide {
+  background: var(--green-soft); color: #5E7358; font-weight: 600; font-size: 12.5px;
+}
+.reco-actions .js-guide:hover { background: #E2EBDE; }
+
+/* 骨架屏 */
+.skeleton { background: var(--card); border-radius: var(--radius-card); box-shadow: var(--shadow); overflow: hidden; }
+.sk-block { background: linear-gradient(90deg, #F3EDE4 25%, #FAF6F0 50%, #F3EDE4 75%); background-size: 400% 100%; animation: shimmer 1.6s ease-in-out infinite; }
+@keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.sk-visual { height: 134px; }
+.sk-body { padding: 18px 20px 22px; }
+.sk-line { height: 12px; border-radius: 6px; margin-bottom: 10px; }
+.sk-line.w60 { width: 60%; } .sk-line.w40 { width: 40%; } .sk-line.w85 { width: 85%; }
+.sk-row { display: flex; gap: 10px; margin-top: 14px; }
+.sk-row .sk-box { flex: 1; height: 62px; border-radius: var(--radius-sm); }
+
+/* 空状态 */
+.empty { grid-column: 1 / -1; background: var(--card); border-radius: var(--radius-card); box-shadow: var(--shadow); padding: 52px 32px; text-align: center; }
+.empty-art {
+  width: 176px; height: 132px; margin: 0 auto 22px; border-radius: var(--radius-card);
+  background: linear-gradient(150deg, var(--green-soft), var(--blue-soft));
+  display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+}
+.empty-art .ea-sun { position: absolute; right: 22px; top: 20px; width: 34px; height: 34px; border-radius: 50%; background: linear-gradient(140deg, #F0DFD6, var(--blush)); opacity: .85; }
+.empty-art .ea-icons { font-size: 44px; position: relative; z-index: 1; }
+.empty h3 { font-size: 17px; margin-bottom: 8px; }
+.empty p { font-size: 13px; color: var(--ink-2); max-width: 380px; margin: 0 auto; line-height: 1.7; }
+
+/* ============================================================================
+   【详情页】弹窗
+   ============================================================================ */
+.overlay {
+  position: fixed; inset: 0; background: rgba(61, 61, 61, .38);
+  backdrop-filter: blur(2px); z-index: 100; opacity: 0; pointer-events: none;
+  transition: opacity .28s var(--ease);
+}
+.overlay.show { opacity: 1; pointer-events: auto; }
+.modal {
+  position: fixed; z-index: 110; background: var(--cream);
+  border-radius: var(--radius-card); box-shadow: 0 20px 60px rgba(0, 0, 0, .18);
+  display: flex; flex-direction: column; overflow: hidden;
+  opacity: 0; pointer-events: none;
+}
+.modal.show { animation: modalIn .34s var(--ease) both; pointer-events: auto; }
+@keyframes modalIn { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: none; } }
+#detailModal { left: 50%; top: 50%; width: min(940px, calc(100vw - 40px)); max-height: calc(100vh - 72px); transform: translate(-50%, -50%); }
+#detailModal.show { animation: detailIn .34s var(--ease) both; }
+@keyframes detailIn {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 20px)) scale(.985); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+#guideModal { right: 0; top: 0; height: 100vh; width: min(568px, 100vw); border-radius: var(--radius-card) 0 0 var(--radius-card); }
+#guideModal.show { animation: drawerIn .34s var(--ease) both; }
+@keyframes drawerIn { from { opacity: 0; transform: translateX(40px); } to { opacity: 1; transform: none; } }
+.modal-head { display: flex; align-items: center; gap: 14px; flex: 0 0 auto; padding: 18px 22px; background: #fff; border-bottom: 1px solid var(--line); }
+.modal-head h3 { font-size: 16.5px; flex: 1; }
+.modal-close {
+  width: 36px; height: 36px; border-radius: 50%; background: var(--cream-deep);
+  color: var(--ink-2); font-size: 16px; display: flex; align-items: center; justify-content: center;
+  transition: all .2s var(--ease);
+}
+.modal-close:hover { background: var(--blush-soft); color: var(--blush-deep); transform: rotate(90deg); }
+.modal-body { overflow-y: auto; padding: 22px; flex: 1; }
+.detail-visual {
+  height: 186px; border-radius: var(--radius-card); margin-bottom: 20px;
+  display: flex; align-items: center; justify-content: center; position: relative; overflow: hidden;
+  box-shadow: 0 8px 26px rgba(120, 130, 120, .16);
+}
+.detail-visual .dv-icon { font-size: 60px; }
+.detail-visual .dv-note {
+  position: absolute; left: 16px; bottom: 14px; font-size: 11.5px; color: #fff;
+  background: rgba(90, 100, 90, .26); padding: 5px 14px; border-radius: var(--radius-pill); backdrop-filter: blur(4px);
+}
+.detail-title { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.detail-title h2 { font-size: 24px; }
+.detail-reason { font-size: 13.5px; color: var(--ink-2); margin: 8px 0 12px; line-height: 1.7; }
+.detail-meta { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px; }
+.detail-meta .m { font-size: 12px; color: var(--ink-2); background: #fff; padding: 7px 15px; border-radius: var(--radius-pill); box-shadow: var(--shadow); }
+.detail-meta .m b { color: var(--green-deep); font-size: 14px; }
+.dcard { background: #fff; border-radius: var(--radius-card); padding: 18px 20px; margin-bottom: 18px; box-shadow: var(--shadow); }
+.dcard h4 { font-size: 15px; margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+.dtable { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.dtable th, .dtable td { text-align: left; padding: 10px 12px; vertical-align: top; border-bottom: 1px solid var(--line); }
+.dtable th { font-size: 11.5px; font-weight: 600; color: var(--ink-3); background: #FDFBF8; }
+.dtable tr:last-child td { border-bottom: none; }
+.dtable td b { font-weight: 600; }
+/* 详情页里的出行方案（卡片分层后，机票/火车信息移到这里） */
+.plans { display: flex; gap: 10px; flex-wrap: wrap; }
+.plan { flex: 1 1 200px; border: 1.5px solid var(--line); border-radius: var(--radius-sm); padding: 13px 15px; background: #FEFDFC; transition: all .2s var(--ease); }
+.plan:hover { transform: translateY(-2px); box-shadow: var(--shadow); }
+.plan.chosen { border-color: var(--green); background: var(--green-soft); }
+.plan-head { display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; flex-wrap: wrap; }
+.plan-line { font-size: 12px; color: var(--ink-2); margin-top: 4px; }
+.plan-price { font-size: 17px; font-weight: 700; color: var(--green-deep); margin-top: 5px; }
+.mini { font-size: 9.5px; font-weight: 600; padding: 2px 8px; border-radius: var(--radius-pill); }
+.mini.time { background: var(--blue-soft); color: #5C7189; }
+.mini.cost { background: var(--green-soft); color: #5E7358; }
+.mini.pick { background: var(--blush-soft); color: var(--blush-deep); }
+.pills { display: flex; gap: 8px; flex-wrap: wrap; }
+.pill { font-size: 12px; padding: 7px 15px; border-radius: var(--radius-pill); background: var(--cream); color: var(--ink-2); }
+.pill.warm { background: var(--blush-soft); color: var(--blush-deep); font-weight: 500; }
+.pill.green { background: var(--green-soft); color: #5E7358; font-weight: 500; }
+.list { list-style: none; margin: 0; padding: 0; }
+.list li { font-size: 12.5px; color: var(--ink-2); padding: 4px 0; }
+.list li b { color: var(--ink); font-weight: 600; }
+.custom-item { border-left: 3px solid var(--green); padding-left: 14px; margin-bottom: 16px; }
+.custom-item:last-child { margin-bottom: 0; }
+.custom-item .ci-name { font-size: 14px; font-weight: 600; }
+.custom-item .ci-desc { font-size: 12.5px; color: var(--ink-2); margin-top: 3px; line-height: 1.65; }
+.custom-item .ci-note { font-size: 12px; color: var(--ink-3); margin-top: 4px; line-height: 1.6; }
+
+/* ============================================================================
+   【攻略弹窗】右侧抽屉
+   ============================================================================ */
+.guide-summary {
+  background: linear-gradient(135deg, var(--green-soft), var(--blue-soft));
+  border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 18px;
+  font-size: 13px; color: #55624F; line-height: 1.7;
+}
+.guide-summary b { font-size: 15px; color: #4A5A45; }
+.day { background: #fff; border-radius: var(--radius-card); padding: 16px 18px; margin-bottom: 16px; box-shadow: var(--shadow); }
+.day-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px dashed var(--line); }
+.day-head b { font-size: 15px; }
+.day-head span { font-size: 12px; color: var(--ink-3); }
+.slot { display: flex; gap: 12px; margin-bottom: 12px; }
+.slot:last-child { margin-bottom: 0; }
+.slot-label { flex: 0 0 48px; height: 26px; border-radius: 9px; background: var(--blue-soft); color: #5C7189; font-size: 11.5px; font-weight: 600; display: flex; align-items: center; justify-content: center; }
+.slot.fixed .slot-label { background: var(--green-soft); color: #5E7358; }
+.slot.empty .slot-label { background: var(--cream-deep); color: var(--ink-3); }
+.slot-body { flex: 1; font-size: 13px; }
+.slot.empty .slot-body { color: var(--ink-3); font-size: 12.5px; }
+.guide-foot { background: #fff; border-radius: var(--radius-card); padding: 18px 20px; box-shadow: var(--shadow); }
+.guide-foot h4 { font-size: 14.5px; margin-bottom: 10px; }
+.foot-line { display: flex; justify-content: space-between; gap: 12px; font-size: 12.5px; color: var(--ink-2); padding: 5px 0; }
+.foot-line b { color: var(--ink); font-weight: 600; }
+.foot-total { border-top: 1px solid var(--line); margin-top: 10px; padding-top: 10px; font-weight: 600; color: var(--ink); }
+
+/* ================= PWA：添加到主屏幕的提示条 ================= */
+#installHint {
+  position: fixed; left: 50%; transform: translateX(-50%);
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 200; width: min(460px, calc(100vw - 28px));
+  background: #fff; border-radius: var(--radius-card);
+  box-shadow: 0 12px 36px rgba(60, 50, 40, .18);
+  padding: 16px 18px; display: none; align-items: flex-start; gap: 12px;
+}
+#installHint.show { display: flex; animation: installIn .34s var(--ease) both; }
+@keyframes installIn {
+  from { opacity: 0; transform: translate(-50%, 16px); }
+  to   { opacity: 1; transform: translate(-50%, 0); }
+}
+#installHint .ih-icon {
+  width: 42px; height: 42px; flex: 0 0 42px; border-radius: 12px;
+  background: linear-gradient(140deg, var(--green), var(--blue));
+  display: flex; align-items: center; justify-content: center; font-size: 20px;
+}
+#installHint .ih-main { flex: 1; min-width: 0; }
+#installHint .ih-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+#installHint .ih-desc { font-size: 12.5px; color: var(--ink-2); line-height: 1.6; }
+#installHint .ih-desc b { color: var(--ink); }
+#installHint .ih-actions { display: flex; align-items: center; gap: 8px; margin-top: 10px; }
+#installHint .ih-btn {
+  padding: 8px 18px; border-radius: var(--radius-pill); font-size: 12.5px; font-weight: 600;
+  background: var(--blush); color: #fff; box-shadow: 0 3px 10px rgba(212, 165, 154, .35);
+  transition: transform .16s var(--ease), background .16s var(--ease);
+}
+#installHint .ih-btn:hover { background: var(--blush-deep); }
+#installHint .ih-btn:active { transform: scale(.96); }
+#installHint .ih-close {
+  width: 30px; height: 30px; flex: 0 0 30px; border-radius: 50%;
+  background: var(--cream-deep); color: var(--ink-3); font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all .16s var(--ease);
+}
+#installHint .ih-close:hover { background: var(--blush-soft); color: var(--blush-deep); }
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 1080px) {
+  .layout { grid-template-columns: 1fr; }
+  .hero { height: 220px; }                 /* 平板：220px */
+  .hero-inner { padding: 0 26px 26px; }
+  .hero-title { font-size: 30px; letter-spacing: 2px; }
+  .hero-slogan { font-size: 14.5px; }
+  .panel { position: static; max-height: none; overflow: visible; }
+  .panel-toggle {
+    display: flex; align-items: center; justify-content: space-between; width: 100%;
+    background: var(--card); border-radius: var(--radius-card); box-shadow: var(--shadow);
+    padding: 16px 20px; font-size: 15px; font-weight: 600; margin-bottom: 14px;
+  }
+  .panel.collapsed .panel-body { display: none; }
+  .key-box { margin-left: 0; width: 100%; }
+  .key-input { width: 100%; }
+}
+@media (max-width: 720px) {
+  .wrap, .topbar-inner { padding-left: 16px; padding-right: 16px; }
+  .hero { margin: 18px 0; height: 200px; }
+  .hero-inner { padding: 0 20px 22px; max-width: none; }
+  .hero-title { font-size: 26px; letter-spacing: 1px; }
+  .hero-slogan { font-size: 13.5px; margin-bottom: 10px; }
+  .hero-tags { display: none; }
+  .hero-fallback .hf-icon { font-size: 56px; }
+  .cards { grid-template-columns: 1fr; gap: 18px; }
+  .row-2 { grid-template-columns: 1fr; }
+  #detailModal { width: 100vw; height: 100vh; max-height: 100vh; left: 0; top: 0; border-radius: 0; }
+  #detailModal.show { animation: drawerIn .3s var(--ease) both; }
+  #guideModal { width: 100vw; border-radius: 0; }
+  .brand-sub { display: none; }
+  .pick { flex: 1 1 78px; min-width: 74px; padding: 10px 6px 9px; }
+  .pick .ico { font-size: 19px; }
+  .pick .txt { font-size: 11.5px; }
+  .modal-body { padding: 16px; }
+}
+</style>
+</head>
+<body>
+
+<div id="boot" class="hidden" style="padding:12px 24px; font-size:13px; background:#F7EDEA; color:#A8776A;"></div>
+
+<!-- ---------- 顶栏【名称】：小满出行 ---------- -->
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <div class="brand-mark">🌾</div>
+      <div>
+        <div class="brand-title">小满出行</div>
+        <div class="brand-sub">为全家找到刚刚好的那趟旅行</div>
+      </div>
+    </div>
+    <div class="key-box">
+      <input id="amapKey" class="key-input" type="text" placeholder="高德 Web 服务 Key（留空用内置示例数据）">
+      <button class="btn btn-fill" id="applyKey">应用并拉取真实数据</button>
+      <span class="badge mock" id="srcBadge">示例数据</span>
+      <span class="badge mock" id="apiBadge">接口 0 次</span>
+    </div>
+    <div class="status-line" id="statusLine">提示：不填 Key 也能完整体验，天气与活动地点会使用内置示例数据。</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- ==========================================================================
+       【视频区】主页介绍区：本地视频 → CSS 动态主视觉 两级降级
+       ========================================================================== -->
+  <section class="hero" id="hero">
+    <!-- 第一优先：本地视频 ./assets/intro.mp4（铺满容器，播完不再循环） -->
+    <video class="hero-video" id="heroVideo" muted autoplay playsinline preload="metadata">
+      <source src="./assets/intro.mp4" type="video/mp4">
+    </video>
+
+    <!-- 介绍图层：视频播放结束后显示，循环播放下面这张卡通动图 -->
+    <div class="hero-image hidden" id="heroImage">
+      <!-- 可选：把一张横图命名为 assets/intro2.jpg 就会优先使用它，覆盖卡通动图 -->
+      <img class="hero-image-img hidden" id="heroImageImg" alt="">
+
+      <!-- 卡通动图：全家自驾出游（内联 SVG + CSS 动画，无外部依赖、缩放不糊） -->
+      <svg class="hero-cartoon" viewBox="0 0 800 340" preserveAspectRatio="xMidYMid slice" aria-label="全家自驾出游动画">
+        <defs>
+          <linearGradient id="cSky" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#CDE6F0"/>
+            <stop offset="50%"  stop-color="#E7F1E3"/>
+            <stop offset="100%" stop-color="#F6F1E3"/>
+          </linearGradient>
+          <linearGradient id="cLand" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#B7CDA8"/>
+            <stop offset="100%" stop-color="#8BA87D"/>
+          </linearGradient>
+          <linearGradient id="cCarBody" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%"   stop-color="#F2A98F"/>
+            <stop offset="100%" stop-color="#DE8568"/>
+          </linearGradient>
+
+          <!-- 可复用的树与草丛（用 use 多次引用，减小体积） -->
+          <g id="cTree">
+            <rect x="36" y="132" width="8" height="26" rx="3" fill="#A9836A"/>
+            <circle cx="40" cy="122" r="21" fill="#9CBB8B"/>
+            <circle cx="27" cy="130" r="14" fill="#B2CCA1"/>
+            <circle cx="53" cy="130" r="13" fill="#8FAF7E"/>
+          </g>
+          <g id="cBush">
+            <ellipse cx="16" cy="10" rx="17" ry="10" fill="#A6C395"/>
+            <ellipse cx="34" cy="12" rx="13" ry="8" fill="#94B484"/>
+          </g>
+          <g id="cFlower">
+            <circle cx="0" cy="0" r="3.2" fill="#F4E1B4"/>
+            <circle cx="5" cy="3" r="2.4" fill="#EBC7C0"/>
+          </g>
+
+          <!-- 飘动的气球 -->
+          <g id="cBalloon">
+            <path d="M0 0 Q9 3 0 6" stroke="#C9A88F" stroke-width="1.5" fill="none"/>
+            <ellipse cx="0" cy="-10" rx="9" ry="11" fill="#D4A59A" opacity=".95"/>
+            <ellipse cx="-3" cy="-13" rx="3" ry="4" fill="#fff" opacity=".45"/>
+          </g>
+
+          <!-- 人物 1：背双肩包、挥手的大人（手臂用 CSS 摇摆） -->
+          <g id="cPersonWave">
+            <ellipse cx="0" cy="1" rx="10" ry="3" fill="#6E8A63" opacity=".22"/>
+            <rect x="-8" y="-18" width="16" height="20" rx="8" fill="#A8B8C8"/>
+            <rect x="6" y="-17" width="7" height="14" rx="3.5" fill="#C38F6E"/>
+            <line x1="-4" y1="2" x2="-4" y2="14" stroke="#4B4440" stroke-width="3.4" stroke-linecap="round"/>
+            <line x1="4" y1="2" x2="4" y2="14" stroke="#4B4440" stroke-width="3.4" stroke-linecap="round"/>
+            <circle cx="0" cy="-26" r="8" fill="#F6D3B4"/>
+            <path d="M-8 -28 Q-6 -37 0 -37 Q6 -37 8 -28 Q4 -33 0 -32 Q-4 -33 -8 -28 Z" fill="#6B5A50"/>
+            <circle cx="-3" cy="-26" r="1.3" fill="#6B5A50"/>
+            <circle cx="3" cy="-26" r="1.3" fill="#6B5A50"/>
+            <path d="M-3 -21.5 Q0 -19.5 3 -21.5" stroke="#6B5A50" stroke-width="1.2" fill="none" stroke-linecap="round"/>
+            <g class="cartoon-arm" style="transform-box:fill-box; transform-origin: 50% 0%;">
+              <line x1="9" y1="-15" x2="18" y2="-30" stroke="#F6D3B4" stroke-width="3.8" stroke-linecap="round"/>
+              <circle cx="19" cy="-31" r="3.2" fill="#F6D3B4"/>
+            </g>
+          </g>
+
+          <!-- 人物 2：蹲下给家人拍照的人 -->
+          <g id="cPersonShoot">
+            <ellipse cx="0" cy="1" rx="9" ry="3" fill="#6E8A63" opacity=".22"/>
+            <rect x="-8" y="-15" width="16" height="16" rx="8" fill="#D4A59A"/>
+            <line x1="-4" y1="1" x2="-5" y2="10" stroke="#4B4440" stroke-width="3.2" stroke-linecap="round"/>
+            <line x1="4" y1="1" x2="5" y2="10" stroke="#4B4440" stroke-width="3.2" stroke-linecap="round"/>
+            <circle cx="0" cy="-22" r="7.5" fill="#F6D3B4"/>
+            <path d="M-7.5 -24 Q-5 -32 0 -32 Q5 -32 7.5 -24 Q3 -28 0 -27 Q-3 -28 -7.5 -24 Z" fill="#4B4440"/>
+            <rect x="8" y="-20" width="15" height="10" rx="2.5" fill="#4B4440"/>
+            <circle cx="13" cy="-15" r="4" fill="#8FA3B0"/>
+            <circle cx="13" cy="-15" r="1.6" fill="#EDE7DE"/>
+          </g>
+
+          <!-- 人物 3：被牵着走路的小朋友 -->
+          <g id="cChild">
+            <ellipse cx="0" cy="1" rx="7" ry="2.4" fill="#6E8A63" opacity=".22"/>
+            <rect x="-6" y="-12" width="12" height="14" rx="6" fill="#F0C9B4"/>
+            <line x1="-3" y1="0" x2="-3.5" y2="8" stroke="#4B4440" stroke-width="2.8" stroke-linecap="round"/>
+            <line x1="3" y1="0" x2="3.5" y2="8" stroke="#4B4440" stroke-width="2.8" stroke-linecap="round"/>
+            <circle cx="0" cy="-18" r="6.5" fill="#F6D3B4"/>
+            <path d="M-6.5 -20 Q-4 -27 0 -27 Q4 -27 6.5 -20 Q3 -24 0 -23 Q-3 -24 -6.5 -20 Z" fill="#6B5A50"/>
+            <circle cx="-2.4" cy="-18" r="1.1" fill="#6B5A50"/>
+            <circle cx="2.4" cy="-18" r="1.1" fill="#6B5A50"/>
+            <circle cx="9" cy="-6" r="3.6" fill="#F2B24B"/>
+            <path d="M9 2 Q9 -3 9 -6" stroke="#C9A88F" stroke-width="1" fill="none"/>
+          </g>
+
+          <!-- 帐篷 -->
+          <g id="cTent">
+            <ellipse cx="38" cy="2" rx="42" ry="5" fill="#6E8A63" opacity=".2"/>
+            <path d="M0 0 L38 -42 L76 0 Z" fill="#E2A88F"/>
+            <path d="M38 -42 L76 0 L38 0 Z" fill="#CE9077"/>
+            <path d="M30 0 L38 -22 L46 0 Z" fill="#FBF6EC" opacity=".9"/>
+            <line x1="0" y1="0" x2="76" y2="0" stroke="#B98267" stroke-width="2.5" stroke-linecap="round"/>
+          </g>
+
+          <!-- 行李箱 -->
+          <g id="cLuggage">
+            <rect x="-3" y="-24" width="26" height="18" rx="3.5" fill="#C08C80"/>
+            <rect x="-3" y="-17" width="26" height="3" fill="#A8776A"/>
+            <rect x="3" y="-15" width="6" height="5" rx="1.5" fill="#FBF6EC" opacity=".8"/>
+            <path d="M4 -24 Q10 -30 16 -24" stroke="#8A6A60" stroke-width="2" fill="none"/>
+          </g>
+
+          <!-- 路牌：指向前面的目的地 -->
+          <g id="cSign">
+            <rect x="17" y="-52" width="5" height="54" rx="2.5" fill="#8A6A60"/>
+            <path d="M0 -50 L40 -50 L46 -44 L40 -38 L0 -38 Z" fill="#C7A98F"/>
+            <path d="M44 -32 L4 -32 L-2 -26 L4 -20 L44 -20 Z" fill="#D8BC9E"/>
+          </g>
+
+          <!-- 热气球 -->
+          <g id="cHotair">
+            <rect x="-9" y="14" width="18" height="13" rx="3" fill="#C08C80"/>
+            <line x1="-9" y1="14" x2="-16" y2="-14" stroke="#9A8577" stroke-width="1.2"/>
+            <line x1="9" y1="14" x2="16" y2="-14" stroke="#9A8577" stroke-width="1.2"/>
+            <circle cx="0" cy="-14" r="21" fill="#E0A896"/>
+            <path d="M-19 -14 A19 19 0 0 1 19 -14 L0 8 Z" fill="#F0C3AC"/>
+            <rect x="-2" y="8" width="4" height="7" fill="#C9A88F"/>
+          </g>
+
+          <!-- 全家自驾的小车（人物从车窗探出） -->
+          <g id="cCar">
+            <path d="M12 32 L20 16 Q24 11 31 11 L61 11 Q68 11 72 16 L80 32 Z" fill="#F6D9CE"/>
+            <rect x="4" y="30" width="108" height="24" rx="12" fill="url(#cCarBody)"/>
+            <rect x="27" y="14" width="21" height="15" rx="5" fill="#CFE4EE"/>
+            <rect x="52" y="14" width="19" height="15" rx="5" fill="#CFE4EE"/>
+            <circle cx="30" cy="34" r="5.5" fill="#F6C9A8"/>
+            <circle cx="30" cy="34.5" r="2.2" fill="#7A5B4A"/>
+            <circle cx="57" cy="36" r="4.5" fill="#F6C9A8"/>
+            <circle cx="102" cy="31" r="3.2" fill="#FFF0C9"/>
+            <g class="cartoon-wheel">
+              <circle cx="28" cy="55" r="11" fill="#4B4440"/>
+              <circle cx="28" cy="55" r="4.6" fill="#EDE7DE"/>
+              <rect x="27" y="47" width="2" height="6" rx="1" fill="#EDE7DE"/>
+            </g>
+            <g class="cartoon-wheel">
+              <circle cx="86" cy="55" r="11" fill="#4B4440"/>
+              <circle cx="86" cy="55" r="4.6" fill="#EDE7DE"/>
+              <rect x="85" y="47" width="2" height="6" rx="1" fill="#EDE7DE"/>
+            </g>
+          </g>
+        </defs>
+
+        <!-- 天空 -->
+        <rect x="0" y="0" width="800" height="340" fill="url(#cSky)"/>
+
+        <!-- 太阳：光芒缓慢旋转 -->
+        <g transform="translate(668,76)">
+          <g class="cartoon-ray" stroke="#F4D79B" stroke-width="4" stroke-linecap="round" opacity=".85">
+            <line x1="0" y1="-42" x2="0" y2="-58"/>
+            <line x1="30" y1="-30" x2="41" y2="-41"/>
+            <line x1="42" y1="0" x2="58" y2="0"/>
+            <line x1="30" y1="30" x2="41" y2="41"/>
+            <line x1="0" y1="42" x2="0" y2="58"/>
+            <line x1="-30" y1="30" x2="-41" y2="41"/>
+            <line x1="-42" y1="0" x2="-58" y2="0"/>
+            <line x1="-30" y1="-30" x2="-41" y2="-41"/>
+          </g>
+          <circle r="30" fill="#F7DCA0"/>
+          <circle r="30" fill="#FFF1CF" opacity=".5"/>
+        </g>
+
+        <!-- 白云：缓慢左移，无缝循环 -->
+        <g class="cartoon-clouds" opacity=".92">
+          <g fill="#FFFFFF">
+            <ellipse cx="90"  cy="70" rx="42" ry="21"/>
+            <ellipse cx="130" cy="60" rx="30" ry="17"/>
+            <ellipse cx="52"  cy="62" rx="25" ry="15"/>
+          </g>
+          <g fill="#FFFFFF" opacity=".92" transform="translate(210,34) scale(.82)">
+            <ellipse cx="90"  cy="70" rx="42" ry="21"/>
+            <ellipse cx="130" cy="60" rx="30" ry="17"/>
+            <ellipse cx="52"  cy="62" rx="25" ry="15"/>
+          </g>
+        </g>
+
+        <!-- 远景山丘（静止） -->
+        <path d="M0 240 Q130 186 260 232 Q370 272 500 228 Q640 180 800 234 L800 340 L0 340 Z"
+              fill="#C7D9BA" opacity=".75"/>
+
+        <!-- 草地与树：整体左移并循环，形成不断前进的感觉 -->
+        <g class="cartoon-land">
+          <g transform="translate(0,0)">
+            <path d="M-20 262 Q80 238 180 260 Q300 286 420 256 Q560 226 700 258 Q760 272 820 262 L820 360 L-20 360 Z"
+                  fill="url(#cLand)"/>
+            <use href="#cTree" x="0"   y="0"/>
+            <use href="#cTree" x="160" y="0"/>
+            <use href="#cTree" x="240" y="0"/>
+            <use href="#cBush" x="60"  y="276"/>
+            <use href="#cBush" x="210" y="282"/>
+            <use href="#cBush" x="300" y="274"/>
+            <g transform="translate(96,300)"><use href="#cFlower"/></g>
+            <g transform="translate(150,312)"><use href="#cFlower"/></g>
+            <g transform="translate(268,304)"><use href="#cFlower"/></g>
+
+            <!-- 路边：露营帐篷 + 行李箱 + 路牌 + 一家人在拍照 -->
+            <g transform="translate(226,268)"><use href="#cTent"/></g>
+            <g transform="translate(196,300)"><use href="#cLuggage"/></g>
+            <g transform="translate(88,300)"><use href="#cSign"/></g>
+            <g transform="translate(48,300)"><use href="#cPersonWave"/></g>
+            <g transform="translate(292,300)"><use href="#cChild"/></g>
+            <g transform="translate(280,300)"><use href="#cPersonShoot"/></g>
+          </g>
+          <g transform="translate(320,0)">
+            <path d="M-20 262 Q80 238 180 260 Q300 286 420 256 Q560 226 700 258 Q760 272 820 262 L820 360 L-20 360 Z"
+                  fill="url(#cLand)"/>
+            <use href="#cTree" x="0"   y="0"/>
+            <use href="#cTree" x="160" y="0"/>
+            <use href="#cTree" x="240" y="0"/>
+            <use href="#cBush" x="60"  y="276"/>
+            <use href="#cBush" x="210" y="282"/>
+            <use href="#cBush" x="300" y="274"/>
+            <g transform="translate(96,300)"><use href="#cFlower"/></g>
+            <g transform="translate(150,312)"><use href="#cFlower"/></g>
+            <g transform="translate(268,304)"><use href="#cFlower"/></g>
+
+            <!-- 路边：露营帐篷 + 行李箱 + 路牌 + 一家人在拍照 -->
+            <g transform="translate(226,268)"><use href="#cTent"/></g>
+            <g transform="translate(196,300)"><use href="#cLuggage"/></g>
+            <g transform="translate(88,300)"><use href="#cSign"/></g>
+            <g transform="translate(48,300)"><use href="#cPersonWave"/></g>
+            <g transform="translate(292,300)"><use href="#cChild"/></g>
+            <g transform="translate(280,300)"><use href="#cPersonShoot"/></g>
+          </g>
+        </g>
+
+        <!-- 飘动的气球 -->
+        <g class="cartoon-balloon"   transform="translate(150,150)"><use href="#cBalloon"/></g>
+        <g class="cartoon-balloon b2" transform="translate(186,124) scale(.82)"><use href="#cBalloon"/></g>
+        <g class="cartoon-balloon b3" transform="translate(118,120) scale(.7)"><use href="#cBalloon"/></g>
+
+        <!-- 天上的热气球与飞鸟（比云更慢，做远近层次） -->
+        <g class="cartoon-hotair">
+          <g transform="translate(120,58) scale(.75)"><use href="#cHotair"/></g>
+          <g transform="translate(420,92) scale(.5)"><use href="#cHotair"/></g>
+          <g stroke="#7E8C9B" stroke-width="2" fill="none" stroke-linecap="round" opacity=".7">
+            <path d="M240 66 q7 -6 14 0 q7 -6 14 0"/>
+            <path d="M286 46 q6 -5 12 0 q6 -5 12 0"/>
+          </g>
+        </g>
+
+        <!-- 公路 -->
+        <rect x="0" y="296" width="800" height="34" fill="#C9BCAE"/>
+        <rect x="0" y="294" width="800" height="4" fill="#B3A496"/>
+        <g stroke="#FBF6EC" stroke-width="4" stroke-linecap="round" opacity=".9" stroke-dasharray="30 34">
+          <line x1="0" y1="313" x2="800" y2="313"/>
+        </g>
+
+        <!-- 全家自驾的小车：从左侧驶入、右侧驶出 -->
+        <g class="cartoon-car" transform="translate(-130,246)">
+          <use href="#cCar"/>
+        </g>
+      </svg>
+
+      <div class="hero-image-caption">根据预算、住宿、松弛感，为全家推荐目的地</div>
+    </div>
+
+    <!-- 视频降级：CSS 动态主视觉（渐变缓慢流动 + 浮动图标 + 柔和光斑） -->
+    <div class="hero-fallback hidden" id="heroFallback">
+      <span class="hf-orb orb-1"></span>
+      <span class="hf-orb orb-2"></span>
+      <span class="hf-orb orb-3"></span>
+      <span class="hf-icon">🧳</span>
+    </div>
+
+    <!-- 文字遮罩 1：深色 38%（视频与介绍图共用，保证白字可读） -->
+    <div class="hero-mask"></div>
+    <!-- 文字遮罩 2：底部渐深（让左下角文字更清晰） -->
+    <div class="hero-scrim"></div>
+
+    <div class="hero-inner">
+      <h1 class="hero-title">小满出行</h1>
+      <p class="hero-slogan">为全家找到刚刚好的那趟旅行</p>
+      <div class="hero-tags">
+        <span class="hero-tag">🏡 住宿条件先对上</span>
+        <span class="hero-tag">🌤️ 出行日期看天气</span>
+        <span class="hero-tag">🗺️ 一键生成行程</span>
+      </div>
+    </div>
+
+    <!-- 静音 / 有声切换（同时控制背景音乐） -->
+    <button class="sound-btn" id="soundBtn" title="切换声音">🔇</button>
+    <span class="sound-hint" id="soundHint">点击开启背景音乐</span>
+  </section>
+
+  <!-- 背景音乐：./assets/bgm.mp3；不存在时降级为 Web Audio 生成的环境音 -->
+  <audio id="bgm" loop preload="none">
+    <source src="./assets/bgm.mp3" type="audio/mpeg">
+  </audio>
+
+  <div class="layout">
+
+    <!-- ==========================================================================
+         输入区：必填三项（不折叠）+ 画像卡片 + 「更多偏好（可选）」折叠区
+         ========================================================================== -->
+    <aside>
+      <button class="panel-toggle" id="panelToggle">填写出行条件 <span id="panelToggleIcon">▾</span></button>
+      <section class="panel" id="panel">
+        <div class="panel-head">
+          <h2>出行条件</h2>
+          <button class="btn btn-line" id="resetAll" style="padding:7px 16px; font-size:12px">重置</button>
+        </div>
+
+        <div class="panel-body">
+          <!-- 画像快速切换：卡片样式 + emoji + 一句话描述 -->
+          <div class="fieldset">
+            <div class="legend">快速开始 <span class="opt">点一下自动填好所有条件</span></div>
+            <div class="profiles">
+              <button class="profile-btn" data-profile="A">
+                <span class="p-ico">👨‍👩‍👧</span>
+                <span class="p-main"><span class="p-title">两大一小 · 5 岁</span>
+                  <span class="p-desc">8000 元预算，想住能做饭的民宿，躺平式度假</span></span>
+              </button>
+              <button class="profile-btn" data-profile="B">
+                <span class="p-ico">👨‍👩‍👦‍👦</span>
+                <span class="p-main"><span class="p-title">三代同堂 · 10 岁</span>
+                  <span class="p-desc">15000 元预算，酒店含早，节奏适中的 10 月出行</span></span>
+              </button>
+              <button class="profile-btn" data-profile="C">
+                <span class="p-ico">👨‍👩‍👧‍👦</span>
+                <span class="p-main"><span class="p-title">两大两小 · 8 岁 + 12 岁</span>
+                  <span class="p-desc">12000 元预算，度假村，想把景点都打卡一遍</span></span>
+              </button>
+            </div>
+            <div class="profile-desc" id="profileDesc">未选择画像，当前为手动填写。</div>
+          </div>
+
+          <!-- ===== 必填三项：始终展开，不折叠 ===== -->
+          <div class="fieldset">
+            <div class="legend"><span class="num">0</span>出发地 <span class="req">必填</span></div>
+            <div class="field">
+              <input class="input" type="text" id="inOrigin" value="北京" list="originList" placeholder="例如：北京">
+              <datalist id="originList">
+                <option value="北京"></option><option value="上海"></option><option value="广州"></option>
+                <option value="深圳"></option><option value="成都"></option><option value="重庆"></option>
+                <option value="杭州"></option><option value="南京"></option><option value="武汉"></option>
+                <option value="西安"></option><option value="长沙"></option><option value="郑州"></option>
+                <option value="天津"></option><option value="青岛"></option><option value="沈阳"></option>
+                <option value="哈尔滨"></option><option value="昆明"></option><option value="贵阳"></option>
+                <option value="南宁"></option><option value="福州"></option><option value="济南"></option>
+                <option value="大连"></option><option value="厦门"></option><option value="兰州"></option>
+              </datalist>
+            </div>
+            <div class="muted" id="originNote">已识别出发地，火车 / 飞机时长与票价按直线距离推算。</div>
+          </div>
+
+          <div class="fieldset">
+            <div class="legend"><span class="num">1</span>计划出行日期 <span class="req">必填</span></div>
+            <div class="row-2">
+              <div class="field"><label>出发</label><input class="input" type="date" id="inDateStart" value="2025-07-10"></div>
+              <div class="field"><label>返回</label><input class="input" type="date" id="inDateEnd" value="2025-07-15"></div>
+            </div>
+            <div class="muted" id="tripDaysNote">行程天数：自动计算</div>
+          </div>
+
+          <div class="fieldset">
+            <div class="legend"><span class="num">2</span>家庭构成 <span class="req">必填</span></div>
+            <div class="row-2">
+              <div class="field"><label>成人数</label><input class="input" type="number" id="inAdults" value="2" min="1" max="8"></div>
+              <div class="field"><label>孩子数量</label><input class="input" type="number" id="inKids" value="1" min="0" max="6"></div>
+            </div>
+            <div class="field">
+              <label>孩子年龄段</label>
+              <select class="input" id="inKidAge">
+                <option value="0-2">0–2 岁（婴幼儿）</option>
+                <option value="3-6" selected>3–6 岁（学龄前）</option>
+                <option value="7-12">7–12 岁（小学）</option>
+                <option value="13-17">13–17 岁（中学）</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- ===== 更多偏好（可选）：默认收起 ===== -->
+          <button class="more-toggle" id="moreToggle">
+            <span>更多偏好（可选）</span>
+            <span class="mt-right"><span id="moreSummary">出行方式 · 预算 · 住宿 · 松弛感 · 干湿度 · 温度</span><span id="moreIcon">▸</span></span>
+          </button>
+
+          <div class="more-body collapsed" id="moreBody">
+            <!-- 出行方式 -->
+            <div class="fieldset">
+              <div class="legend"><span class="num">3</span>出行方式</div>
+              <div class="picker" data-picker>
+                <label class="pick on"><input type="radio" name="transport" value="auto" checked>
+                  <span class="ico">🔄</span><span class="txt">两者都看</span><span class="sub">对比后推荐</span></label>
+                <label class="pick"><input type="radio" name="transport" value="plane">
+                  <span class="ico">✈️</span><span class="txt">飞机</span><span class="sub">省时优先</span></label>
+                <label class="pick"><input type="radio" name="transport" value="train">
+                  <span class="ico">🚄</span><span class="txt">火车</span><span class="sub">省钱稳妥</span></label>
+              </div>
+            </div>
+
+            <!-- 预算范围 -->
+            <div class="fieldset">
+              <div class="legend"><span class="num">4</span>预算范围</div>
+              <div class="picker" data-picker>
+                <label class="pick on"><input type="radio" name="budgetMode" value="total" checked>
+                  <span class="ico">🧮</span><span class="txt">总预算</span></label>
+                <label class="pick"><input type="radio" name="budgetMode" value="perPerson">
+                  <span class="ico">👤</span><span class="txt">人均预算</span></label>
+              </div>
+              <div class="row-2" style="margin-top:12px">
+                <div class="field"><label>金额</label><input class="input" type="number" id="inBudget" value="8000" min="500" step="500"></div>
+                <div class="field"><label>币种</label>
+                  <select class="input" id="inCurrency">
+                    <option value="CNY" selected>人民币 CNY</option>
+                    <option value="USD">美元 USD</option>
+                    <option value="HKD">港币 HKD</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            <!-- 住宿要求 -->
+            <div class="fieldset">
+              <div class="legend"><span class="num">5</span>住宿要求 <span class="opt">可多选</span></div>
+              <div class="picker blush" data-picker>
+                <label class="pick on"><input type="checkbox" class="accType" value="酒店">
+                  <span class="ico">🏨</span><span class="txt">酒店</span></label>
+                <label class="pick on"><input type="checkbox" class="accType" value="民宿" checked>
+                  <span class="ico">🏡</span><span class="txt">民宿</span></label>
+                <label class="pick"><input type="checkbox" class="accType" value="亲子房">
+                  <span class="ico">🧸</span><span class="txt">亲子房</span></label>
+                <label class="pick"><input type="checkbox" class="accType" value="度假村">
+                  <span class="ico">🌴</span><span class="txt">度假村</span></label>
+              </div>
+              <div class="picker" data-picker style="margin-top:10px">
+                <label class="pick"><input type="checkbox" id="inBreakfast" checked>
+                  <span class="ico">🥐</span><span class="txt">必须含早</span></label>
+                <label class="pick"><input type="checkbox" id="inKitchen" checked>
+                  <span class="ico">🍳</span><span class="txt">要有厨房</span></label>
+              </div>
+            </div>
+
+            <!-- 松弛感需求 -->
+            <div class="fieldset">
+              <div class="legend"><span class="num">6</span>松弛感需求</div>
+              <div class="picker" data-picker>
+                <label class="pick"><input type="radio" name="relax" value="紧凑打卡型">
+                  <span class="ico">🏃</span><span class="txt">紧凑打卡</span><span class="sub">每天 3–4 个</span></label>
+                <label class="pick"><input type="radio" name="relax" value="适中平衡型">
+                  <span class="ico">🚶</span><span class="txt">适中平衡</span><span class="sub">每天 2–3 个</span></label>
+                <label class="pick on"><input type="radio" name="relax" value="躺平度假型" checked>
+                  <span class="ico">🛋️</span><span class="txt">躺平度假</span><span class="sub">每天 1–2 个</span></label>
+              </div>
+            </div>
+
+            <!-- 干湿度要求 -->
+            <div class="fieldset">
+              <div class="legend"><span class="num">7</span>地区干湿度 <span class="opt">可选项</span></div>
+              <div class="picker" data-picker>
+                <label class="pick on"><input type="radio" name="humidity" value="不限" checked>
+                  <span class="ico">➖</span><span class="txt">不限制</span></label>
+                <label class="pick"><input type="radio" name="humidity" value="偏干燥">
+                  <span class="ico">🌵</span><span class="txt">偏干燥</span></label>
+                <label class="pick"><input type="radio" name="humidity" value="偏湿润">
+                  <span class="ico">💧</span><span class="txt">偏湿润</span></label>
+                <label class="pick"><input type="radio" name="humidity" value="适中">
+                  <span class="ico">🌿</span><span class="txt">适中</span></label>
+              </div>
+            </div>
+
+            <!-- 温度需求 -->
+            <div class="fieldset">
+              <div class="legend"><span class="num">8</span>温度需求</div>
+              <div class="picker" data-picker>
+                <label class="pick"><input type="radio" name="temp" value="严寒">
+                  <span class="ico">❄️</span><span class="txt">严寒</span><span class="sub">0℃ 以下</span></label>
+                <label class="pick"><input type="radio" name="temp" value="凉爽">
+                  <span class="ico">🌬️</span><span class="txt">凉爽</span><span class="sub">0–15℃</span></label>
+                <label class="pick on"><input type="radio" name="temp" value="温和" checked>
+                  <span class="ico">🌤️</span><span class="txt">温和</span><span class="sub">15–25℃</span></label>
+                <label class="pick"><input type="radio" name="temp" value="炎热">
+                  <span class="ico">☀️</span><span class="txt">炎热</span><span class="sub">25℃ 以上</span></label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </aside>
+
+    <!-- 推荐结果区 -->
+    <main>
+      <div class="results-head">
+        <h2>为你推荐的目的地</h2>
+        <span class="muted" id="resultCount"></span>
+      </div>
+      <div class="caliber" id="caliberNote"></div>
+      <div class="cards" id="cards"></div>
+    </main>
+
+  </div>
+</div>
+
+<div class="overlay" id="overlay"></div>
+<div class="modal" id="detailModal">
+  <div class="modal-head">
+    <h3 id="detailHeadTitle">目的地详情</h3>
+    <button class="modal-close" id="detailClose" title="关闭">✕</button>
+  </div>
+  <div class="modal-body" id="detailBody"></div>
+</div>
+<div class="modal" id="guideModal">
+  <div class="modal-head">
+    <h3 id="guideHeadTitle">行程攻略</h3>
+    <button class="modal-close" id="guideClose" title="关闭">✕</button>
+  </div>
+  <div class="modal-body" id="guideBody"></div>
+</div>
+
+<!-- ================= PWA：添加到主屏幕的提示条（安卓弹安装按钮 / iOS 给操作指引） ================= -->
+<div id="installHint">
+  <div class="ih-icon">🌾</div>
+  <div class="ih-main">
+    <div class="ih-title">把小满出行装到手机上</div>
+    <div class="ih-desc" id="ihDesc">装到主屏幕后，打开就是全屏，像 App 一样，不用每次输网址。</div>
+    <div class="ih-actions" id="ihActions">
+      <button class="ih-btn" id="ihInstall">立即添加</button>
+    </div>
+  </div>
+  <button class="ih-close" id="ihClose" title="不再提示">✕</button>
+</div>
+
+<script>
+/* ============================================================================
+   模块 0 · 基础数据与工具（推荐逻辑与数据均沿用前几轮，未改动）
+   ============================================================================ */
+var ORIGIN_COORDS = {
+  '北京':[116.407,39.904], '上海':[121.474,31.230], '广州':[113.264,23.129], '深圳':[114.058,22.543],
+  '成都':[104.066,30.572], '重庆':[106.551,29.563], '杭州':[120.155,30.274], '南京':[118.797,32.060],
+  '武汉':[114.305,30.593], '西安':[108.940,34.341], '长沙':[112.939,28.228], '郑州':[113.625,34.747],
+  '天津':[117.191,39.132], '青岛':[120.383,36.067], '沈阳':[123.429,41.796], '哈尔滨':[126.535,45.803],
+  '昆明':[102.833,24.880], '贵阳':[106.630,26.647], '南宁':[108.320,22.824], '福州':[119.296,26.074],
+  '厦门':[118.089,24.479], '济南':[117.121,36.651], '石家庄':[114.515,38.042], '太原':[112.549,37.857],
+  '合肥':[117.227,31.821], '南昌':[115.858,28.683], '兰州':[103.834,36.061], '乌鲁木齐':[87.617,43.793],
+  '海口':[110.199,20.044], '三亚':[109.508,18.247], '苏州':[120.585,31.299], '宁波':[121.550,29.875],
+  '无锡':[120.312,31.491], '温州':[120.699,27.994], '大连':[121.615,38.914], '珠海':[113.577,22.271]
+};
+
+var HERO_GRADIENTS = [
+  'linear-gradient(140deg, #CFDCC9 0%, #B5C4B1 60%, #A8B8C8 100%)',
+  'linear-gradient(140deg, #E8D9CF 0%, #D4A59A 60%, #C4A9AE 100%)',
+  'linear-gradient(140deg, #D9E2EA 0%, #A8B8C8 55%, #BFC9D6 100%)',
+  'linear-gradient(140deg, #EAE3D4 0%, #D9CDB4 55%, #C9BCA5 100%)',
+  'linear-gradient(140deg, #DFE7DA 0%, #C3D0BE 55%, #B5C4B1 100%)',
+  'linear-gradient(140deg, #F0E2DD 0%, #DCC2BA 55%, #CDA99F 100%)'
+];
+
+var CITIES = [
+  { name:'北京', prov:'北京市', adcode:'110000', coord:'116.407,39.904', emoji:'🏯',
+    normal:[-3.1,0.3,7.2,14.8,20.8,24.9,26.7,25.4,20.8,14.0,5.6,-0.9],
+    humid:[44,42,38,38,48,60,72,74,64,55,50,45], peak:[1,2,7,8,10],
+    acc:['酒店','亲子房'], bf:true, kit:['民宿'], tiers:{酒店:[500,1400],民宿:[350,850],亲子房:[600,1500],度假村:[900,2200]},
+    actNeed:3, act:['故宫博物院','中国科学技术馆'], eat:['四季民福烤鸭店','局气'],
+    customs:[{name:'逛胡同的礼数',desc:'老北京胡同里多为住户，参观时保持安静、不随意推门。',note:'着装：无特殊要求；礼节：与人搭话先问好；禁忌：不要对着住户门窗拍照。'}],
+    extras:['地坛庙会（春节前后）','什刹海冬季冰场','老舍茶馆听相声','奥林匹克森林公园骑行'] },
+
+  { name:'上海', prov:'上海市', adcode:'310000', coord:'121.474,31.230', emoji:'🎡',
+    normal:[4.8,6.6,10.4,15.9,21.2,25.1,29.1,28.8,24.9,19.6,13.2,7.0],
+    humid:[72,72,71,70,72,78,76,76,74,70,70,70], peak:[4,5,7,8,10],
+    acc:['酒店','亲子房'], bf:true, kit:['民宿'], tiers:{酒店:[600,1600],民宿:[450,1000],亲子房:[700,1800],度假村:[1100,2600]},
+    actNeed:3, act:['上海迪士尼度假区','上海自然博物馆'], eat:['南翔馒头店','老盛昌汤包'],
+    customs:[{name:'排队与公共秩序',desc:'上海公共场所排队意识强，地铁先下后上，带孩子出行尽量提前预留时间。',note:'着装：商场与餐厅不宜穿拖鞋；礼节：扶梯靠右站立；禁忌：地铁内饮食会被劝阻。'}],
+    extras:['豫园元宵灯会','上海科技节亲子场','朱家角水乡摇橹船','滨江森林公园露营'] },
+
+  { name:'杭州', prov:'浙江省', adcode:'330100', coord:'120.155,30.274', emoji:'🌊',
+    normal:[4.6,6.4,10.3,16.2,21.4,24.8,28.6,28.1,24.0,18.8,12.6,6.8],
+    humid:[74,75,75,73,73,78,74,74,75,73,73,72], peak:[3,4,5,10],
+    acc:['酒店','民宿','度假村'], bf:true, kit:['民宿'], tiers:{酒店:[500,1300],民宿:[380,900],亲子房:[600,1400],度假村:[900,2300]},
+    actNeed:3, act:['西湖风景名胜区','中国湿地博物馆'], eat:['外婆家','知味观'],
+    customs:[{name:'龙井茶礼',desc:'茶村品茶多为先尝后买，主人斟茶时可用食指轻点桌面表示感谢。',note:'着装：茶园步道建议平底鞋；礼节：接茶用双手；禁忌：不要自行采摘茶农茶树。'}],
+    extras:['西湖夜游船','宋城千古情演出','塘栖枇杷节（5 月）','西溪湿地摇橹船'] },
+
+  { name:'苏州', prov:'江苏省', adcode:'320500', coord:'120.585,31.299', emoji:'🏛️',
+    normal:[3.8,5.6,9.8,15.6,21.0,24.8,28.4,28.0,23.8,18.4,12.2,6.0],
+    humid:[73,74,73,71,72,77,76,76,74,72,72,71], peak:[3,4,5,10],
+    acc:['酒店','民宿'], bf:true, kit:['民宿'], tiers:{酒店:[450,1200],民宿:[350,850],亲子房:[550,1300],度假村:[800,2000]},
+    actNeed:2, act:['拙政园','苏州博物馆'], eat:['松鹤楼','同得兴'],
+    customs:[{name:'园林游览礼节',desc:'古典园林空间小巧，避免大声喧哗与追逐，也不要在廊柱上刻字。',note:'着装：园林多石板路，建议防滑鞋；礼节：拍照礼让；禁忌：假山与古建构件禁止攀爬。'}],
+    extras:['平江路评弹小剧场','虎丘庙会','金鸡湖夜景骑行','太湖东山采摘'] },
+
+  { name:'成都', prov:'四川省', adcode:'510100', coord:'104.066,30.572', emoji:'🐼',
+    normal:[5.6,8.0,12.4,17.6,21.6,24.2,25.9,25.4,21.8,17.2,11.8,7.0],
+    humid:[78,77,75,74,74,79,82,82,83,82,80,79], peak:[7,8,10],
+    acc:['酒店','民宿','亲子房'], bf:false, kit:['民宿'], tiers:{酒店:[380,950],民宿:[280,700],亲子房:[500,1200],度假村:[800,1800]},
+    actNeed:2, act:['成都大熊猫繁育研究基地','金沙遗址博物馆'], eat:['陈麻婆豆腐','小龙翻大江'],
+    customs:[{name:'茶馆与火锅礼节',desc:'成都茶馆可免费续水，坐久不催客；火锅店普遍提供儿童清汤锅。',note:'着装：潮湿多雨备薄外套；礼节：添茶时轻叩桌面；禁忌：熊猫基地禁止投喂与闪光灯。'}],
+    extras:['锦里夜市','川剧变脸演出','人民公园鹤鸣茶社','青城山亲子徒步'] },
+
+  { name:'西双版纳', prov:'云南省', adcode:'532800', coord:'100.797,22.010', emoji:'🌴',
+    normal:[16.2,18.0,21.5,24.6,26.0,26.2,25.8,25.6,24.8,22.8,19.6,16.4],
+    humid:[72,68,65,67,76,82,85,85,84,82,78,74], peak:[1,2,4,5,7,8],
+    acc:['度假村','民宿','酒店'], bf:true, kit:['民宿'], tiers:{酒店:[500,1200],民宿:[400,900],亲子房:[600,1400],度假村:[1000,2600]},
+    actNeed:4, act:['中国科学院西双版纳热带植物园','曼听公园'], eat:['告庄星光夜市','曼飞龙烤鸡'],
+    customs:[{name:'傣族村寨礼节',desc:'进傣族佛寺需脱鞋，不可触摸他人头部，也不要用脚指向佛像或他人。',note:'着装：进入佛寺需过膝衣物、不露肩；礼节：双手合十问好；禁忌：不要随意拍摄僧人。'}],
+    extras:['泼水节（4 月）','告庄夜市傣味烧烤','雨林穿越体验','澜沧江夜游'] },
+
+  { name:'丽江', prov:'云南省', adcode:'530700', coord:'100.227,26.856', emoji:'🏔️',
+    normal:[5.9,7.6,10.5,13.4,16.3,17.8,17.6,17.0,15.6,13.2,9.4,6.2],
+    humid:[55,52,48,48,58,72,78,78,75,68,60,56], peak:[1,2,4,5,7,8,10],
+    acc:['民宿','酒店'], bf:false, kit:['民宿'], tiers:{酒店:[350,900],民宿:[250,650],亲子房:[450,1100],度假村:[700,1700]},
+    actNeed:3, act:['丽江古城','玉龙雪山'], eat:['丽江腊排骨','鸡豆凉粉'],
+    customs:[{name:'纳西族东巴文化',desc:'古城内的东巴文字与壁画属于文化遗产，参观时不要触摸刻画。',note:'着装：雪山需羽绒服与防晒；礼节：进纳西院落先征得同意；禁忌：不要踩踏门槛与经幡。'}],
+    extras:['古城篝火打跳','白沙壁画','拉市海骑马','束河古镇手作市集'] },
+
+  { name:'大理', prov:'云南省', adcode:'532900', coord:'100.267,25.606', emoji:'🚲',
+    normal:[9.0,10.8,13.8,16.8,19.4,20.6,20.3,19.8,18.4,16.0,12.2,9.2],
+    humid:[58,55,52,54,62,72,78,78,76,70,64,60], peak:[1,2,4,5,7,8,10],
+    acc:['民宿','度假村'], bf:false, kit:['民宿'], tiers:{酒店:[320,850],民宿:[220,600],亲子房:[420,1000],度假村:[700,1600]},
+    actNeed:2, act:['洱海生态廊道','大理古城'], eat:['大理酸辣鱼','喜洲粑粑'],
+    customs:[{name:'白族三道茶',desc:'白族待客有三道茶（苦、甜、回味），按顺序品尝并道谢是基本礼节。',note:'着装：紫外线强需防晒帽；礼节：接茶双手捧杯；禁忌：洱海周边禁止下水与乱扔垃圾。'}],
+    extras:['三月街民族节','喜洲扎染体验','洱海骑行一日','苍山索道观景'] },
+
+  { name:'三亚', prov:'海南省', adcode:'460200', coord:'109.508,18.247', emoji:'🏖️',
+    normal:[21.4,22.4,25.0,27.8,29.4,29.6,29.2,28.6,27.8,26.6,24.6,22.0],
+    humid:[74,76,78,79,81,84,83,84,85,82,78,74], peak:[1,2,7,8,10],
+    acc:['度假村','酒店','亲子房'], bf:true, kit:['民宿'], tiers:{酒店:[700,2000],民宿:[500,1300],亲子房:[900,2400],度假村:[1200,3200]},
+    actNeed:3, act:['亚龙湾','蜈支洲岛'], eat:['第一市场海鲜','文昌鸡'],
+    customs:[{name:'海鲜市场加工',desc:'第一市场先买海鲜再到店加工，记得当面复秤并约定加工费，避免后续争议。',note:'着装：防晒衣与珊瑚鞋；礼节：渔民忌讳翻鱼身；禁忌：珊瑚与贝壳禁止带离海滩。'}],
+    extras:['黎族三月三','沙滩篝火晚会','热带雨林漂流','免税城亲子购物'] },
+
+  { name:'厦门', prov:'福建省', adcode:'350200', coord:'118.089,24.479', emoji:'🍜',
+    normal:[13.0,14.0,16.4,20.4,24.2,27.0,28.6,28.2,26.6,23.0,19.0,15.0],
+    humid:[72,74,76,78,80,82,78,78,76,72,70,70], peak:[4,5,7,8,10],
+    acc:['酒店','民宿','亲子房'], bf:true, kit:['民宿'], tiers:{酒店:[500,1300],民宿:[350,900],亲子房:[600,1500],度假村:[900,2200]},
+    actNeed:3, act:['鼓浪屿','厦门科技馆'], eat:['沙茶面','黄则和花生汤'],
+    customs:[{name:'工夫茶与博饼',desc:'闽南人爱喝工夫茶，小杯慢饮；中秋前后有博饼民俗，参与时按主人指引即可。',note:'着装：海岛风大备薄外套；礼节：接茶致谢；禁忌：鼓浪屿部分老别墅为私宅，勿擅自进入。'}],
+    extras:['鼓浪屿钢琴博物馆演出','曾厝垵文创市集','环岛路骑行','中秋博饼民俗体验'] },
+
+  { name:'青岛', prov:'山东省', adcode:'370200', coord:'120.383,36.067', emoji:'🍺',
+    normal:[-0.5,1.6,6.4,12.2,17.8,21.8,25.4,25.6,21.8,16.0,8.6,2.0],
+    humid:[63,64,66,70,74,80,84,82,76,68,65,63], peak:[7,8,10],
+    acc:['酒店','度假村'], bf:true, kit:['民宿'], tiers:{酒店:[450,1300],民宿:[350,900],亲子房:[550,1300],度假村:[900,2100]},
+    actNeed:2, act:['栈桥','青岛海底世界'], eat:['劈柴院','船歌鱼水饺'],
+    customs:[{name:'啤酒屋规矩',desc:'散啤按袋或扎计，拼桌常见，带孩子建议选择有卡座的店铺。',note:'着装：海边风大注意保暖；礼节：拼桌先打招呼；禁忌：海滨礁石区涨潮时禁止逗留。'}],
+    extras:['青岛国际啤酒节（8 月）','奥帆中心帆船体验','崂山茶园采摘','台东夜市'] },
+
+  { name:'昆明', prov:'云南省', adcode:'530100', coord:'102.833,24.880', emoji:'🌸',
+    normal:[9.0,11.2,14.6,18.0,20.0,20.6,20.4,20.0,18.6,16.2,12.4,9.2],
+    humid:[60,56,52,54,64,74,78,78,76,72,66,62], peak:[1,2,7,8,10],
+    acc:['酒店','民宿'], bf:true, kit:['民宿'], tiers:{酒店:[350,900],民宿:[250,650],亲子房:[450,1100],度假村:[700,1700]},
+    actNeed:2, act:['滇池','云南民族村'], eat:['建新园过桥米线','汽锅鸡'],
+    customs:[{name:'鲜花与米线',desc:'昆明人日常买花、吃米线，过桥米线讲究先烫生肉再下米线，店家通常会上手示范。',note:'着装：昼夜温差大备外套；礼节：递物用双手；禁忌：民族村内部分表演禁止录像。'}],
+    extras:['斗南花市夜场','云南映象歌舞演出','翠湖海鸥季（冬季）','西山龙门索道'] },
+
+  { name:'贵阳', prov:'贵州省', adcode:'520100', coord:'106.630,26.647', emoji:'⛰️',
+    normal:[5.0,7.0,11.4,16.4,20.2,22.6,24.2,23.8,20.8,16.4,11.4,6.6],
+    humid:[78,77,75,74,76,80,78,78,78,80,79,78], peak:[7,8,10],
+    acc:['酒店','民宿'], bf:false, kit:['民宿'], tiers:{酒店:[300,850],民宿:[250,650],亲子房:[400,1000],度假村:[600,1500]},
+    actNeed:2, act:['黔灵山公园','青岩古镇'], eat:['丝娃娃','酸汤鱼'],
+    customs:[{name:'苗族待客礼',desc:'苗寨迎客有拦门酒，不便饮酒可礼貌说明，主人一般不会强求。',note:'着装：山区多雨备雨具与防滑鞋；礼节：进寨跟随向导；禁忌：不要触碰苗族银饰与头饰。'}],
+    extras:['苗年节（农历十月）','青岩古镇夜市','黄果树瀑布一日游','侗族大歌演出'] },
+
+  { name:'桂林', prov:'广西壮族自治区', adcode:'450300', coord:'110.290,25.274', emoji:'⛵',
+    normal:[8.4,10.2,14.4,19.6,24.0,27.0,28.6,28.2,25.8,21.2,15.6,10.4],
+    humid:[74,76,78,79,80,82,78,77,74,72,72,72], peak:[4,5,7,8,10],
+    acc:['酒店','民宿'], bf:false, kit:['民宿'], tiers:{酒店:[300,900],民宿:[220,600],亲子房:[400,1000],度假村:[600,1500]},
+    actNeed:2, act:['漓江','象山景区'], eat:['桂林米粉','阳朔啤酒鱼'],
+    customs:[{name:'竹筏与渔火',desc:'漓江竹筏需穿救生衣，儿童须由成人全程陪同；渔火表演为当地传统捕鱼方式。',note:'着装：竹筏易溅水备替换衣物；礼节：尊重渔民作业水域；禁忌：不要向江中投掷物品。'}],
+    extras:['阳朔西街夜市','印象·刘三姐实景演出','龙脊梯田徒步','遇龙河竹筏漂流'] },
+
+  { name:'西安', prov:'陕西省', adcode:'610100', coord:'108.940,34.341', emoji:'🏺',
+    normal:[1.0,4.0,10.0,16.4,21.4,26.0,27.4,25.8,20.6,14.4,7.4,2.0],
+    humid:[62,60,58,58,60,58,66,70,74,76,72,66], peak:[4,5,7,8,10],
+    acc:['酒店','亲子房'], bf:true, kit:['民宿'], tiers:{酒店:[350,1000],民宿:[280,700],亲子房:[450,1100],度假村:[700,1700]},
+    actNeed:3, act:['秦始皇帝陵博物院','陕西历史博物馆'], eat:['老孙家泡馍','子午路张记肉夹馍'],
+    customs:[{name:'泡馍要自己掰',desc:'牛羊肉泡馍讲究自己把馍掰成小块，掰得越细越入味，店员会据此下锅。',note:'着装：博物馆内空调较凉备薄外套；礼节：掰馍前先洗手；禁忌：兵马俑坑内禁止使用闪光灯与自拍杆。'}],
+    extras:['大唐不夜城夜游','城墙新春灯会','永兴坊摔碗酒','华清宫长恨歌演出'] },
+
+  { name:'珠海', prov:'广东省', adcode:'440400', coord:'113.577,22.271', emoji:'🐬',
+    normal:[15.4,16.4,19.0,22.8,26.0,27.8,28.6,28.4,27.2,24.4,20.6,16.6],
+    humid:[72,76,80,82,82,84,80,80,78,74,70,68], peak:[1,2,7,8,10],
+    acc:['度假村','酒店','亲子房'], bf:true, kit:['民宿'], tiers:{酒店:[500,1400],民宿:[350,900],亲子房:[600,1500],度假村:[900,2200]},
+    actNeed:3, act:['珠海长隆海洋王国','情侣路'], eat:['湾仔海鲜街','横琴蚝'],
+    customs:[{name:'海岛与澳门口岸',desc:'横琴口岸通关需带齐证件，节假日排队较久，带小孩建议避开早晚高峰。',note:'着装：海岛日照强备防晒；礼节：口岸区域听从指引；禁忌：海洋王国部分场馆禁止使用闪光灯。'}],
+    extras:['长隆海洋夜光巡游','海岛露营（东澳岛）','横琴天沐河骑行','湾仔海鲜夜市'] },
+
+  { name:'大连', prov:'辽宁省', adcode:'210200', coord:'121.615,38.914', emoji:'🐚',
+    normal:[-3.5,-1.0,4.2,10.4,16.2,20.6,24.2,24.6,20.4,14.2,6.6,0.2],
+    humid:[62,63,63,64,68,76,82,80,72,66,64,62], peak:[7,8,10],
+    acc:['酒店','度假村'], bf:true, kit:['民宿'], tiers:{酒店:[400,1100],民宿:[300,800],亲子房:[500,1200],度假村:[800,1900]},
+    actNeed:2, act:['老虎滩海洋公园','星海广场'], eat:['大连海鲜焖子','品海楼'],
+    customs:[{name:'赶海与海鲜',desc:'退潮时可在指定滩涂赶海，但需留意潮汐表；海胆、鲍鱼等按季供应。',note:'着装：海边风大备防风外套；礼节：礁石区互相提醒；禁忌：禁渔期禁止捕捞与售卖幼鱼。'}],
+    extras:['大连国际沙滩节','东港威尼斯水城夜景','旅顺樱花季（4 月）','滨海路徒步'] },
+
+  { name:'鼓浪屿', prov:'福建省厦门市', adcode:'350200', coord:'118.089,24.479', emoji:'🎹',
+    normal:[13.0,14.0,16.4,20.4,24.2,27.0,28.6,28.2,26.6,23.0,19.0,15.0],
+    humid:[72,74,76,78,80,82,78,78,76,72,70,70], peak:[4,5,7,8,10],
+    acc:['民宿','酒店'], bf:true, kit:['民宿'], tiers:{酒店:[450,1200],民宿:[350,850],亲子房:[550,1300],度假村:[800,2000]},
+    actNeed:2, act:['日光岩','菽庄花园'], eat:['鼓浪屿馅饼','林氏鱼丸'],
+    customs:[{name:'琴岛安静公约',desc:'鼓浪屿为步行岛，居民区较多，夜间保持安静是当地共识。',note:'着装：岛上多坡道穿舒适鞋；礼节：民宿入住按约定时间；禁忌：无居民通道的院落请勿进入。'}],
+    extras:['钢琴博物馆定时演奏','龙头路小吃街','海边音乐市集','菽庄花园听涛'] }
+];
+
+var PROFILES = {
+  A: { origin:'北京', transport:'auto', adults:2, kids:1, kidAge:'3-6',
+       budgetMode:'total', budget:8000, currency:'CNY',
+       acc:['民宿'], breakfast:false, kitchen:true,
+       relax:'躺平度假型', humidity:'偏湿润', temp:'温和',
+       start:'2025-07-10', end:'2025-07-15',
+       desc:'北京出发 / 总预算 8000 元 / 民宿带厨房 / 躺平度假 / 偏湿润 / 温和 / 7 月出行' },
+  B: { origin:'上海', transport:'train', adults:4, kids:1, kidAge:'7-12',
+       budgetMode:'total', budget:15000, currency:'CNY',
+       acc:['酒店'], breakfast:true, kitchen:false,
+       relax:'适中平衡型', humidity:'不限', temp:'凉爽',
+       start:'2025-10-02', end:'2025-10-07',
+       desc:'上海出发 / 总预算 15000 元 / 酒店含早 / 适中平衡 / 不限干湿度 / 凉爽 / 10 月出行 / 只看火车' },
+  C: { origin:'广州', transport:'auto', adults:2, kids:2, kidAge:'7-12',
+       budgetMode:'total', budget:12000, currency:'CNY',
+       acc:['度假村'], breakfast:false, kitchen:false,
+       relax:'紧凑打卡型', humidity:'偏干燥', temp:'炎热',
+       start:'2025-08-05', end:'2025-08-10',
+       desc:'广州出发 / 总预算 12000 元 / 度假村 / 紧凑打卡 / 偏干燥 / 炎热 / 8 月出行' }
+};
+
+var DIMS = [
+  { key:'budget',   name:'预算匹配',   weight:30 },
+  { key:'stay',     name:'住宿匹配',   weight:20 },
+  { key:'relax',    name:'松弛感匹配', weight:20 },
+  { key:'humidity', name:'干湿度匹配', weight:10 },
+  { key:'temp',     name:'温度匹配',   weight:20 },
+  { key:'date',     name:'日期适配',   weight:15 }
+];
+var CURRENCY_RATE = { CNY:1, USD:7.2, HKD:0.92 };
+var RELAX_VALUE   = { '紧凑打卡型':1, '适中平衡型':2, '躺平度假型':3 };
+var RELAX_TOL     = 1.0;
+var HUMID_TOL     = 12;
+var TEMP_BANDS    = { '严寒':{t:-4,tol:8}, '凉爽':{t:9,tol:8}, '温和':{t:20,tol:7}, '炎热':{t:29,tol:6} };
+var LIVE_TEMP_HORIZON_DAYS = 10;
+var MAX_RESULTS   = 10;
+
+var REMOTE = {};
+var API_CALLS = 0;
+var API_MSG = '';
+var LAST_ROWS = [];
+var loadingCards = false;
+
+function el(id) { return document.getElementById(id); }
+function clamp(v, lo, hi) { return Math.max(lo, Math.min(hi, v)); }
+function fmtMoney(n) { return Math.round(n).toLocaleString('zh-CN'); }
+function fmtMinutes(min) {
+  min = Math.round(min);
+  if (min < 60) return min + ' 分钟';
+  var h = Math.floor(min / 60), m = min % 60;
+  return h + ' 小时' + (m ? ' ' + m + ' 分' : '');
+}
+function gradientOf(name) {
+  var sum = 0;
+  for (var i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+  return HERO_GRADIENTS[sum % HERO_GRADIENTS.length];
+}
+
+/* ============================================================================
+   城市地标插画：每个城市用一段内联 SVG 风景表示（无需任何图片文件）
+   - 有本地实景图（assets/城市图/<城市名>.jpg）时优先用照片
+   - 没有照片时用这里的插画，避免卡片图位空着
+   ============================================================================ */
+function citySceneSVG(name) {
+  var cloud = '<g fill="#FFFFFF" opacity=".72">' +
+                '<ellipse cx="52" cy="30" rx="24" ry="11"/>' +
+                '<ellipse cx="74" cy="25" rx="17" ry="9"/>' +
+                '<ellipse cx="33" cy="26" rx="14" ry="8"/>' +
+              '</g>';
+  var birds = '<g stroke="#7E8C9B" stroke-width="1.8" fill="none" stroke-linecap="round" opacity=".65">' +
+                '<path d="M262 40 q6 -5 12 0 q6 -5 12 0"/>' +
+                '<path d="M296 56 q5 -4 10 0 q5 -4 10 0"/>' +
+              '</g>';
+  var sun   = '<circle cx="306" cy="40" r="17" fill="#F7DCA0" opacity=".9"/>';
+  var water = '<rect x="0" y="112" width="340" height="24" fill="#AFC6D6" opacity=".55"/>';
+
+  var scenes = {
+    /* 北京：故宫角楼 + 城墙 */
+    '北京': '<rect x="86" y="66" width="168" height="8" fill="#B8543F"/>' +
+            '<rect x="86" y="52" width="168" height="12" rx="4" fill="#C9603F"/>' +
+            '<rect x="104" y="62" width="132" height="52" fill="#D9C6A8"/>' +
+            '<rect x="132" y="74" width="76" height="40" fill="#8E4A38"/>' +
+            '<rect x="66" y="36" width="44" height="11" rx="3" fill="#C9603F"/>' +
+            '<rect x="70" y="47" width="36" height="67" fill="#D9C6A8"/>' +
+            '<rect x="230" y="36" width="44" height="11" rx="3" fill="#C9603F"/>' +
+            '<rect x="234" y="47" width="36" height="67" fill="#D9C6A8"/>' +
+            '<rect x="0" y="114" width="340" height="22" fill="#C9B79C"/>',
+
+    /* 上海：东方明珠 + 陆家嘴天际线 */
+    '上海': '<rect x="40" y="70" width="26" height="62" fill="#9FB3C2"/>' +
+            '<rect x="72" y="56" width="30" height="76" fill="#B0C2D0"/>' +
+            '<rect x="258" y="62" width="34" height="70" fill="#A8BCCB"/>' +
+            '<rect x="160" y="30" width="9" height="102" fill="#C2D0DA"/>' +
+            '<circle cx="164" cy="56" r="19" fill="#C2D0DA"/>' +
+            '<circle cx="164" cy="96" r="14" fill="#C2D0DA"/>' +
+            '<rect x="164" y="14" width="2.5" height="18" fill="#C2D0DA"/>' +
+            '<rect x="214" y="46" width="24" height="86" fill="#B6C6D2"/>' +
+            '<rect x="0" y="128" width="340" height="6" fill="#9FB3C2" opacity=".7"/>' + water,
+
+    /* 杭州：西湖 + 雷峰塔 + 远山 */
+    '杭州': '<path d="M0 100 Q60 68 120 96 Q180 122 240 92 Q292 68 340 94 L340 136 L0 136 Z" fill="#9DB68E" opacity=".55"/>' +
+            '<rect x="236" y="46" width="38" height="10" rx="3" fill="#8E6E58"/>' +
+            '<rect x="242" y="56" width="26" height="52" fill="#D9C6A8"/>' +
+            '<rect x="238" y="38" width="34" height="9" rx="3" fill="#8E6E58"/>' +
+            '<path d="M240 108 L270 108 L284 118 L226 118 Z" fill="#C9B79C"/>' +
+            water +
+            '<path d="M96 116 L188 116 L172 108 L112 108 Z" fill="#8E6E58"/>',
+
+    /* 苏州：园林月洞门 + 亭子 + 小桥 */
+    '苏州': '<rect x="60" y="60" width="130" height="60" fill="#DCD2C0"/>' +
+            '<circle cx="125" cy="94" r="24" fill="#AFC6D6" opacity=".85"/>' +
+            '<rect x="216" y="52" width="8" height="66" fill="#9A8577"/>' +
+            '<path d="M196 54 L244 54 L220 34 Z" fill="#B8543F"/>' +
+            '<path d="M198 60 L242 60 L220 44 Z" fill="#C9603F" opacity=".8"/>' +
+            '<rect x="60" y="118" width="220" height="6" fill="#C9B79C"/>' +
+            '<path d="M40 130 Q90 106 140 130" stroke="#C9B79C" stroke-width="8" fill="none"/>' +
+            water,
+
+    /* 成都：熊猫 + 竹林 */
+    '成都': '<rect x="20" y="60" width="7" height="72" fill="#8FAF7E"/>' +
+            '<rect x="32" y="72" width="7" height="60" fill="#9CBB8B"/>' +
+            '<rect x="300" y="56" width="7" height="76" fill="#8FAF7E"/>' +
+            '<rect x="310" y="70" width="7" height="62" fill="#9CBB8B"/>' +
+            '<ellipse cx="170" cy="106" rx="46" ry="28" fill="#F2F0EC"/>' +
+            '<circle cx="170" cy="72" r="30" fill="#F2F0EC"/>' +
+            '<ellipse cx="146" cy="56" rx="11" ry="13" fill="#4B4440"/>' +
+            '<ellipse cx="194" cy="56" rx="11" ry="13" fill="#4B4440"/>' +
+            '<ellipse cx="152" cy="76" rx="10" ry="8" fill="#4B4440"/>' +
+            '<ellipse cx="188" cy="76" rx="10" ry="8" fill="#4B4440"/>' +
+            '<circle cx="156" cy="74" r="3" fill="#FFFFFF"/>' +
+            '<circle cx="184" cy="74" r="3" fill="#FFFFFF"/>' +
+            '<ellipse cx="170" cy="86" rx="6" ry="4.5" fill="#4B4440"/>' +
+            '<ellipse cx="130" cy="118" rx="13" ry="9" fill="#4B4440" transform="rotate(-18 130 118)"/>' +
+            '<ellipse cx="212" cy="118" rx="13" ry="9" fill="#4B4440" transform="rotate(18 212 118)"/>' +
+            '<rect x="0" y="120" width="340" height="16" fill="#B7CDA8"/>',
+
+    /* 西双版纳：热带植物 + 佛塔 + 大象 */
+    '西双版纳': '<path d="M0 116 Q40 96 80 116 T160 116 T240 116 T320 116 T400 116 L400 136 L0 136 Z" fill="#8FAF7E"/>' +
+            '<path d="M250 60 L300 60 L275 34 Z" fill="#E8D7A8"/>' +
+            '<rect x="266" y="60" width="18" height="52" fill="#EFE2BA"/>' +
+            '<rect x="256" y="104" width="38" height="10" fill="#D9C99C"/>' +
+            '<path d="M266 40 L275 30 L284 40 Z" fill="#D9C99C"/>' +
+            '<path d="M46 118 Q40 92 46 72" stroke="#7FA56E" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+            '<path d="M76 118 Q82 94 74 76" stroke="#8FB57F" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+            '<path d="M96 118 Q104 96 96 80" stroke="#7FA56E" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+            '<ellipse cx="152" cy="108" rx="28" ry="15" fill="#B9BCC2"/>' +
+            '<circle cx="176" cy="100" r="11" fill="#B9BCC2"/>' +
+            '<ellipse cx="186" cy="102" rx="4" ry="8" fill="#C8CBD0"/>' +
+            '<circle cx="166" cy="93" r="5" fill="#B9BCC2"/>' +
+            '<line x1="140" y1="120" x2="140" y2="128" stroke="#8E9198" stroke-width="4" stroke-linecap="round"/>' +
+            '<line x1="162" y1="120" x2="162" y2="128" stroke="#8E9198" stroke-width="4" stroke-linecap="round"/>',
+
+    /* 丽江：古城屋顶 + 玉龙雪山 */
+    '丽江': '<path d="M150 96 L210 26 L270 96 Z" fill="#D6DCE2"/>' +
+            '<path d="M196 40 L210 26 L226 42 L214 50 Z" fill="#FFFFFF" opacity=".9"/>' +
+            '<path d="M60 96 L110 50 L160 96 Z" fill="#C4CCD4"/>' +
+            '<path d="M180 96 L240 50 L300 96 Z" fill="#C4CCD4" opacity=".8"/>' +
+            '<rect x="0" y="96" width="340" height="40" fill="#C9B79C"/>' +
+            '<path d="M30 96 L52 80 L74 96 Z" fill="#8E6E58"/>' +
+            '<path d="M96 96 L118 80 L140 96 Z" fill="#9A7A63"/>' +
+            '<path d="M206 96 L228 80 L250 96 Z" fill="#8E6E58"/>' +
+            '<rect x="40" y="96" width="12" height="14" fill="#A9836A"/>' +
+            '<rect x="222" y="96" width="12" height="14" fill="#A9836A"/>',
+
+    /* 大理：洱海 + 三塔 + 苍山 */
+    '大理': '<path d="M0 96 Q80 66 160 92 Q240 116 340 88 L340 136 L0 136 Z" fill="#A8B8C8" opacity=".5"/>' +
+            '<rect x="118" y="52" width="13" height="58" fill="#E3D7BD"/>' +
+            '<rect x="112" y="66" width="25" height="7" rx="2" fill="#D3C4A6"/>' +
+            '<rect x="114" y="44" width="21" height="9" rx="2" fill="#D3C4A6"/>' +
+            '<rect x="154" y="62" width="11" height="48" fill="#E3D7BD"/>' +
+            '<rect x="149" y="74" width="21" height="6" rx="2" fill="#D3C4A6"/>' +
+            '<rect x="190" y="52" width="13" height="58" fill="#E3D7BD"/>' +
+            '<rect x="184" y="66" width="25" height="7" rx="2" fill="#D3C4A6"/>' +
+            '<rect x="186" y="44" width="21" height="9" rx="2" fill="#D3C4A6"/>' +
+            water,
+
+    /* 三亚：椰树 + 沙滩 + 海 */
+    '三亚': '<rect x="0" y="88" width="340" height="20" fill="#8FBBD4" opacity=".7"/>' +
+            '<path d="M0 108 Q60 100 120 108 T240 108 T340 108 L340 136 L0 136 Z" fill="#F0E2C4"/>' +
+            '<path d="M84 108 Q76 76 82 52" stroke="#A9836A" stroke-width="7" fill="none" stroke-linecap="round"/>' +
+            '<path d="M82 54 Q56 44 40 56" stroke="#7FA56E" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+            '<path d="M82 54 Q104 40 126 52" stroke="#8FB57F" stroke-width="6" fill="none" stroke-linecap="round"/>' +
+            '<path d="M82 52 Q78 34 62 26" stroke="#7FA56E" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+            '<path d="M82 52 Q94 30 112 26" stroke="#8FB57F" stroke-width="5" fill="none" stroke-linecap="round"/>' +
+            '<circle cx="40" cy="74" r="9" fill="#C9A86A" opacity=".8"/>' +
+            sun,
+
+    /* 厦门：鼓浪屿红顶别墅 + 日光岩 */
+    '厦门': '<path d="M30 104 L86 46 L142 104 Z" fill="#AEBFC9"/>' +
+            '<rect x="150" y="66" width="70" height="48" fill="#E8DCC8"/>' +
+            '<path d="M146 68 L185 42 L224 68 Z" fill="#B8543F"/>' +
+            '<rect x="176" y="84" width="18" height="30" fill="#8E6E58"/>' +
+            '<rect x="156" y="78" width="12" height="12" fill="#AFC6D6"/>' +
+            '<rect x="202" y="78" width="12" height="12" fill="#AFC6D6"/>' +
+            '<rect x="244" y="76" width="46" height="38" fill="#DCD2C0"/>' +
+            '<path d="M240 78 L267 58 L294 78 Z" fill="#C9603F"/>' +
+            '<rect x="262" y="92" width="12" height="22" fill="#8E6E58"/>' +
+            water,
+
+    /* 青岛：栈桥 + 红瓦屋顶 + 灯塔 */
+    '青岛': '<path d="M0 96 Q60 78 120 94 Q180 110 240 92 Q292 78 340 94 L340 136 L0 136 Z" fill="#A8B8C8" opacity=".45"/>' +
+            '<rect x="70" y="72" width="52" height="42" fill="#DCD2C0"/>' +
+            '<path d="M66 74 L96 54 L126 74 Z" fill="#B8543F"/>' +
+            '<rect x="140" y="80" width="44" height="34" fill="#E8DCC8"/>' +
+            '<path d="M136 82 L162 64 L188 82 Z" fill="#C9603F"/>' +
+            '<rect x="196" y="80" width="52" height="34" fill="#DCD2C0"/>' +
+            '<path d="M192 82 L222 62 L252 82 Z" fill="#B8543F"/>' +
+            '<rect x="270" y="52" width="16" height="62" fill="#E8DCC8"/>' +
+            '<rect x="264" y="46" width="28" height="10" rx="3" fill="#B8543F"/>' +
+            '<circle cx="278" cy="42" r="6" fill="#F2B24B"/>' +
+            water,
+
+    /* 昆明：滇池 + 西山 + 红嘴鸥 + 石林 */
+    '昆明': '<path d="M0 92 Q70 62 140 88 Q210 112 280 84 Q310 72 340 84 L340 136 L0 136 Z" fill="#9DB68E" opacity=".55"/>' +
+            '<path d="M218 92 L244 62 L270 92 Z" fill="#B0C2A8" opacity=".8"/>' +
+            '<path d="M250 92 L272 68 L294 92 Z" fill="#A2B79A" opacity=".8"/>' +
+            water +
+            '<path d="M96 66 q7 -6 14 0" stroke="#FFFFFF" stroke-width="2.6" fill="none" stroke-linecap="round"/>' +
+            '<path d="M124 52 q6 -5 12 0" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round"/>' +
+            '<path d="M76 44 q5 -4 10 0" stroke="#FFFFFF" stroke-width="2.2" fill="none" stroke-linecap="round"/>' +
+            sun,
+
+    /* 贵阳：喀斯特峰林 + 风雨桥 */
+    '贵阳': '<path d="M20 112 Q28 60 56 56 Q84 60 92 112 Z" fill="#8FAF8A" opacity=".85"/>' +
+            '<path d="M110 112 Q120 74 146 70 Q172 74 182 112 Z" fill="#7FA07C" opacity=".85"/>' +
+            '<path d="M200 112 Q206 82 228 78 Q250 82 256 112 Z" fill="#8FAF8A" opacity=".8"/>' +
+            '<path d="M276 112 Q284 68 308 64 Q330 68 338 112 Z" fill="#7FA07C" opacity=".75"/>' +
+            '<rect x="96" y="104" width="150" height="7" rx="3" fill="#A9836A"/>' +
+            '<rect x="110" y="104" width="7" height="20" fill="#8E6E58"/>' +
+            '<rect x="226" y="104" width="7" height="20" fill="#8E6E58"/>' +
+            '<path d="M100 104 Q171 82 242 104" stroke="#B8543F" stroke-width="4" fill="none"/>' +
+            '<rect x="0" y="124" width="340" height="12" fill="#6F8A6C" opacity=".6"/>',
+
+    /* 桂林：漓江喀斯特 + 竹筏 */
+    '桂林': '<path d="M0 116 Q26 40 74 44 Q116 48 132 116 Z" fill="#8FAF9E" opacity=".9"/>' +
+            '<path d="M108 116 Q140 58 186 62 Q226 66 240 116 Z" fill="#7C9E8E" opacity=".9"/>' +
+            '<path d="M214 116 Q244 74 288 78 Q326 82 338 116 Z" fill="#8FAF9E" opacity=".85"/>' +
+            '<rect x="0" y="116" width="340" height="20" fill="#AFC6D6" opacity=".6"/>' +
+            '<rect x="120" y="112" width="46" height="7" rx="3" fill="#B98F63"/>' +
+            '<line x1="138" y1="96" x2="138" y2="112" stroke="#8A6A60" stroke-width="2.5"/>' +
+            '<path d="M126 96 L150 96 L142 88 L134 88 Z" fill="#D9C6A8"/>' +
+            '<path d="M196 124 q8 -6 16 0 q8 -6 16 0" stroke="#FFFFFF" stroke-width="2" fill="none" opacity=".7"/>',
+
+    /* 西安：城墙 + 大雁塔 */
+    '西安': '<rect x="0" y="96" width="340" height="28" fill="#B79E7E"/>' +
+            '<rect x="0" y="90" width="340" height="8" fill="#A88E6E"/>' +
+            '<rect x="20" y="80" width="26" height="18" fill="#B79E7E"/>' +
+            '<rect x="294" y="80" width="26" height="18" fill="#B79E7E"/>' +
+            '<rect x="40" y="72" width="9" height="18" fill="#A88E6E"/>' +
+            '<rect x="290" y="72" width="9" height="18" fill="#A88E6E"/>' +
+            '<rect x="196" y="44" width="46" height="48" fill="#D9C6A8"/>' +
+            '<rect x="190" y="36" width="58" height="10" rx="3" fill="#C2AE8C"/>' +
+            '<rect x="196" y="58" width="46" height="6" fill="#C2AE8C" opacity=".7"/>' +
+            '<rect x="196" y="76" width="46" height="6" fill="#C2AE8C" opacity=".7"/>' +
+            '<rect x="212" y="24" width="14" height="14" fill="#C2AE8C"/>' +
+            '<circle cx="219" cy="18" r="5" fill="#F2B24B"/>' +
+            '<rect x="0" y="124" width="340" height="12" fill="#9E876B" opacity=".7"/>',
+
+    /* 珠海：海岸线 + 日月贝剧院 + 港珠澳大桥 */
+    '珠海': '<path d="M0 104 Q70 88 140 100 Q210 112 280 96 Q312 88 340 96 L340 136 L0 136 Z" fill="#8FBBD4" opacity=".6"/>' +
+            '<path d="M104 108 Q104 62 152 62 Q200 62 200 108 Z" fill="#E8DCC8"/>' +
+            '<path d="M118 108 Q118 74 152 74 Q186 74 186 108 Z" fill="#DCD2C0" opacity=".8"/>' +
+            '<path d="M226 108 Q226 76 262 76 Q298 76 298 108 Z" fill="#E8DCC8" opacity=".9"/>' +
+            '<rect x="0" y="118" width="340" height="5" fill="#C9B79C"/>' +
+            '<line x1="0" y1="118" x2="340" y2="118" stroke="#B0A08C" stroke-width="2"/>' +
+            '<rect x="60" y="60" width="7" height="58" fill="#C9B79C"/>' +
+            '<rect x="250" y="52" width="7" height="66" fill="#C9B79C"/>' +
+            sun,
+
+    /* 大连：海岸礁石 + 灯塔 + 海鸥 */
+    '大连': '<path d="M0 106 Q40 92 80 104 Q120 116 160 102 Q200 90 240 104 Q290 118 340 100 L340 136 L0 136 Z" fill="#8FBBD4" opacity=".6"/>' +
+            '<rect x="112" y="58" width="24" height="46" fill="#F2F0EC"/>' +
+            '<rect x="106" y="50" width="36" height="10" rx="3" fill="#B8543F"/>' +
+            '<path d="M108 50 L124 34 L140 50 Z" fill="#C9603F"/>' +
+            '<rect x="118" y="72" width="12" height="14" fill="#AFC6D6"/>' +
+            '<path d="M40 116 Q60 104 84 112 Q104 118 120 112 L120 136 L40 136 Z" fill="#9A948A"/>' +
+            '<path d="M212 116 Q238 100 268 110 Q296 118 320 110 L320 136 L212 136 Z" fill="#A8A29A"/>' +
+            '<path d="M232 46 q8 -7 16 0" stroke="#FFFFFF" stroke-width="2.6" fill="none" stroke-linecap="round"/>' +
+            '<path d="M268 34 q7 -6 14 0" stroke="#FFFFFF" stroke-width="2.4" fill="none" stroke-linecap="round"/>',
+
+    /* 鼓浪屿：老别墅群 + 三角梅 + 海 */
+    '鼓浪屿': '<path d="M40 106 L76 74 L112 106 Z" fill="#C9603F"/>' +
+            '<rect x="52" y="92" width="48" height="22" fill="#E8DCC8"/>' +
+            '<rect x="132" y="76" width="58" height="38" fill="#DCD2C0"/>' +
+            '<path d="M128 78 L161 56 L194 78 Z" fill="#B8543F"/>' +
+            '<rect x="146" y="92" width="14" height="22" fill="#8E6E58"/>' +
+            '<rect x="170" y="88" width="12" height="12" fill="#AFC6D6"/>' +
+            '<rect x="206" y="84" width="52" height="30" fill="#E8DCC8"/>' +
+            '<path d="M202 86 L232 68 L262 86 Z" fill="#C9603F"/>' +
+            '<rect x="274" y="66" width="14" height="48" fill="#DCD2C0"/>' +
+            '<circle cx="281" cy="60" r="9" fill="#D4A59A"/>' +
+            water +
+            '<circle cx="96" cy="116" r="5" fill="#D4A59A"/>' +
+            '<circle cx="112" cy="120" r="4" fill="#E0A896"/>'
+  };
+
+  var bg = scenes[name];
+  /* 没有专属插画的兜底：天空 + 柔光 + 云 + 草坡 */
+  if (!bg) {
+    bg = '<circle cx="160" cy="70" r="42" fill="#FFFFFF" opacity=".28"/>' +
+         '<path d="M0 104 Q60 88 120 102 Q180 116 240 100 Q292 88 340 102 L340 136 L0 136 Z" ' +
+         'fill="#B7CDA8" opacity=".85"/>';
+  }
+
+  return '<svg class="reco-scene" viewBox="0 0 340 136" preserveAspectRatio="xMidYMid slice" aria-hidden="true">' +
+           bg + cloud + birds +
+         '</svg>';
+}
+
+/* ============================================================================
+   城市实景图（可选）：约定目录 assets/城市图/<城市名>.jpg
+   也支持 .jpeg/.png/.webp。有图则优先用照片，无图则用上面的地标插画。
+   探测结果做缓存，避免每次重绘都重新试一遍
+   ============================================================================ */
+var CITY_PHOTO_DIR = './assets/城市图/';
+var CITY_PHOTO_EXTS = ['jpg', 'jpeg', 'png', 'webp'];
+var cityPhotoState = {};     // 城市名 → 'loading' | 'yes' | 'no'
+var cityPhotoUrl = {};       // 城市名 → 可用的图片地址
+var cityPhotoPending = {};   // 探测中的记录：{ cbs:[回调], idx:当前扩展名下标 }
+
+/* 返回该城市是否有实景图；首次调用会异步探测，完成后执行 onLoaded */
+function photoCheck(cityName, onLoaded) {
+  var state = cityPhotoState[cityName];
+  if (state === 'yes') return true;      // 已确认有图
+  if (state === 'no') return false;      // 已确认没有图
+  if (state === 'loading') {             // 正在探测，把回调挂上去
+    var info = cityPhotoPending[cityName];
+    if (info && onLoaded) info.cbs.push(onLoaded);
+    return false;
+  }
+
+  cityPhotoState[cityName] = 'loading';
+  cityPhotoPending[cityName] = { cbs: onLoaded ? [onLoaded] : [], idx: 0 };
+
+  var notify = function (name) {
+    var it = cityPhotoPending[name];
+    if (!it) return;
+    var cbs = it.cbs.slice();
+    delete cityPhotoPending[name];
+    for (var c = 0; c < cbs.length; c++) { try { cbs[c](); } catch (e) {} }
+  };
+
+  var tryNext = function (name) {
+    var it = cityPhotoPending[name];
+    if (!it) return;
+    if (it.idx >= CITY_PHOTO_EXTS.length) {
+      cityPhotoState[name] = 'no';       // 四种扩展名都没有 → 判定无图
+      notify(name);
+      return;
+    }
+    var url = CITY_PHOTO_DIR + name + '.' + CITY_PHOTO_EXTS[it.idx];
+    it.idx++;
+    var probe = new Image();
+    probe.onload = function () {
+      cityPhotoState[name] = 'yes';
+      cityPhotoUrl[name] = url;
+      notify(name);
+    };
+    probe.onerror = function () { tryNext(name); };
+    try { probe.src = encodeURI(url); } catch (e) { tryNext(name); }
+  };
+
+  tryNext(cityName);
+  return false;
+}
+
+function monthsOf(startStr, endStr) {
+  var s = startStr ? new Date(startStr + 'T00:00:00') : null;
+  var e = endStr ? new Date(endStr + 'T00:00:00') : null;
+  if (!s || isNaN(s.getTime())) return [new Date().getMonth() + 1];
+  if (!e || isNaN(e.getTime()) || e < s) e = s;
+  var out = [], cur = new Date(s.getFullYear(), s.getMonth(), 1), guard = 0;
+  while (cur <= e && guard < 24) {
+    out.push(cur.getMonth() + 1);
+    cur.setMonth(cur.getMonth() + 1);
+    guard++;
+  }
+  return out.length ? out : [s.getMonth() + 1];
+}
+function tripDays(startStr, endStr) {
+  var s = new Date(startStr + 'T00:00:00'), e = new Date(endStr + 'T00:00:00');
+  if (isNaN(s.getTime())) return 5;
+  if (isNaN(e.getTime()) || e < s) return 1;
+  return Math.max(1, Math.round((e - s) / 86400000) + 1);
+}
+function toLatLng(v) {
+  if (Object.prototype.toString.call(v) === '[object Array]') return [parseFloat(v[0]), parseFloat(v[1])];
+  var p = String(v).split(',');
+  return [parseFloat(p[0]), parseFloat(p[1])];
+}
+function haversineKm(a, b) {
+  var R = 6371, rad = Math.PI / 180;
+  var dLat = (b[1] - a[1]) * rad, dLon = (b[0] - a[0]) * rad;
+  var t = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+          Math.cos(a[1] * rad) * Math.cos(b[1] * rad) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  return 2 * R * Math.asin(Math.min(1, Math.sqrt(t)));
+}
+
+/* ============================================================================
+   音乐降级：A) 本地 ./assets/bgm.mp3　B) Web Audio 生成极简环境音
+   浏览器禁止自动播放有声内容，因此两者都由 🔊 按钮触发
+   ============================================================================ */
+var SOUND_ON = false;
+var bgmEl = null;
+
+/* Web Audio 生成：3–4 个柔和正弦波音符循环，音量极低，不干扰阅读 */
+var waCtx = null, waTimer = null, waMaster = null, waNoteIndex = 0;
+var WA_NOTES = [261.63, 329.63, 392.00, 440.00];   // C4 / E4 / G4 / A4，五声音阶式的柔和组合
+
+function webAudioStart() {
+  if (waTimer) return;
+  var AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;                          // 浏览器不支持 Web Audio 时静默放弃
+  try {
+    if (!waCtx) {
+      waCtx = new AC();
+      waMaster = waCtx.createGain();
+      waMaster.gain.value = 0.045;          // 音量很低，只作氛围
+      waMaster.connect(waCtx.destination);
+    }
+    if (waCtx.state === 'suspended') waCtx.resume();
+    var playOne = function () {
+      if (!SOUND_ON) return;
+      try {
+        var t = waCtx.currentTime;
+        var osc = waCtx.createOscillator();
+        var gain = waCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = WA_NOTES[waNoteIndex % WA_NOTES.length];
+        waNoteIndex++;
+        gain.gain.setValueAtTime(0.0001, t);
+        gain.gain.exponentialRampToValueAtTime(0.5, t + 1.6);    // 缓慢淡入
+        gain.gain.exponentialRampToValueAtTime(0.0001, t + 4.4); // 缓慢淡出
+        osc.connect(gain); gain.connect(waMaster);
+        osc.start(t); osc.stop(t + 4.6);
+      } catch (e) {}
+    };
+    playOne();
+    waTimer = setInterval(playOne, 3200);   // 每 3.2 秒一个音符，形成安静循环
+  } catch (e) { waTimer = null; }
+}
+
+function webAudioStop() {
+  if (waTimer) { clearInterval(waTimer); waTimer = null; }
+  if (waMaster && waCtx) {
+    try { waMaster.gain.value = 0; } catch (e) {}
+  }
+}
+
+/* 本地音频播放（存在就放，不存在或失败则走 Web Audio） */
+function musicStart() {
+  if (!bgmEl) bgmEl = el('bgm');
+  if (!bgmEl) { webAudioStart(); return; }
+  if (bgmEl.getAttribute('data-missing') === '1') { webAudioStart(); return; }
+  var p = bgmEl.play();
+  if (p && p.catch) {
+    p.catch(function () {              // 文件不存在 / 解码失败 / 被策略拦下
+      bgmEl.setAttribute('data-missing', '1');
+      webAudioStart();
+    });
+  }
+}
+function musicStop() {
+  if (bgmEl) { try { bgmEl.pause(); } catch (e) {} }
+  webAudioStop();
+}
+function refreshSoundUI() {
+  var btn = el('soundBtn'), hint = el('soundHint');
+  if (btn) btn.textContent = SOUND_ON ? '🔊' : '🔇';
+  if (btn) btn.title = SOUND_ON ? '关闭声音' : '开启声音';
+  if (hint) hint.textContent = SOUND_ON ? '点击静音' : '点击开启背景音乐';
+}
+function toggleSound() {
+  SOUND_ON = !SOUND_ON;
+  var v = el('heroVideo');
+  if (v) v.muted = !SOUND_ON;          // 视频与音乐同一个开关
+  if (SOUND_ON) musicStart(); else musicStop();
+  refreshSoundUI();
+}
+
+/* ============================================================================
+   视频区
+   ① 交叉淡化：视频 ended 后，`.hero-image` 淡入（1.2s）与 `.hero-video` 淡出同时进行
+   ② 介绍图层：循环播放内联 SVG 卡通动图；若存在 assets/intro2.jpg 则用它覆盖
+   ③ 视频降级：文件缺失 / 解码失败 / 6 秒无数据 → 同样走淡入流程
+   ============================================================================ */
+var FADE_MS = 1200;             // 与 CSS 里的 1.2s 保持一致
+var heroFallbackUsed = false;   // 是否已切到「卡通动图」
+var heroImageShown  = false;    // 是否已开始切换
+var heroVideoDone   = false;    // 视频是否已播完
+
+/* 显示介绍图层：视频淡出 + 卡通动图淡入（交叉淡化） */
+function showHeroImage(reason) {
+  if (heroImageShown) return;
+  heroImageShown = true;
+
+  var img = el('heroImageImg');
+  var box = el('heroImage');
+  var v = el('heroVideo');
+
+  /* 可选：intro2.jpg 存在就用它覆盖卡通动图；加载失败则保留卡通动图 */
+  if (img) {
+    img.onload = function () {
+      img.className = 'hero-image-img';
+      if (window.console && console.info) console.info('[小满出行] 介绍图使用 assets/intro2.jpg，已覆盖卡通动图');
+    };
+    img.onerror = function () {
+      img.className = 'hero-image-img hidden';
+      if (window.console && console.info) console.info('[小满出行] 未找到 assets/intro2.jpg，介绍图使用卡通动图');
+    };
+    try { img.src = './assets/intro2.jpg'; } catch (e) {}
+  }
+
+  /* ① 先把卡通动图淡入（视频还在下面，避免淡出过程露出底色） */
+  if (box) box.className = 'hero-image show';
+
+  /* ② 再让视频淡出，淡完才把它移出布局 */
+  if (v) {
+    v.classList.add('fading');
+    setTimeout(function () {
+      v.classList.add('gone');
+      v.classList.remove('fading');
+      try { v.pause(); } catch (e) {}
+    }, FADE_MS);
+  }
+  if (window.console && console.info) console.info('[小满出行] 交叉淡化到卡通动图：' + reason);
+}
+
+/* 视频不可用时的降级：直接淡入卡通动图 */
+function fallbackHero(reason) {
+  if (heroFallbackUsed) return;
+  heroFallbackUsed = true;
+  showHeroImage('视频不可用（' + reason + '）');
+}
+
+function initHero() {
+  var v = el('heroVideo');
+
+  /* 没有 video 元素：直接显示介绍图 */
+  if (!v) { fallbackHero('没有 video 元素'); return; }
+
+  /* ② 视频播完 → 切换介绍图，并且不再切回视频 */
+  v.addEventListener('ended', function () {
+    heroVideoDone = true;
+    showHeroImage('视频播放结束，交叉淡化到卡通动图');
+  });
+
+  /* ① 加载失败 / 无画面 / 超时 → 直接显示介绍图 */
+  v.addEventListener('error', function () { fallbackHero('视频加载失败（文件不存在或格式不支持）'); });
+  v.addEventListener('loadedmetadata', function () {
+    if (!v.videoWidth) fallbackHero('视频无可解码画面');
+  });
+  setTimeout(function () {
+    if (!heroFallbackUsed && !heroVideoDone && (!v.readyState || v.readyState < 1)) {
+      fallbackHero('视频元数据超时未就绪');
+    }
+  }, 6000);
+
+  /* 兜底：个别浏览器在静音自动播放时 ended 事件不稳定，这里按播放进度补一次 */
+  v.addEventListener('timeupdate', function () {
+    if (heroVideoDone || heroFallbackUsed) return;
+    if (v.duration && isFinite(v.duration) && v.currentTime >= v.duration - 0.25) {
+      heroVideoDone = true;
+      showHeroImage('视频播放结束（进度兜底判定），交叉淡化到卡通动图');
+    }
+  });
+
+  var p = v.play();
+  if (p && p.catch) p.catch(function () {
+    /* 自动播放被拦下：保留首帧，不切介绍图；用户点一下页面即可继续 */
+  });
+}
+
+/* ============================================================================
+   模块 1 · 输入区：必填三项 + 画像卡片 + 「更多偏好」折叠
+   ============================================================================ */
+function readInputs() {
+  var accTypes = [];
+  var boxes = document.querySelectorAll('.accType');
+  for (var i = 0; i < boxes.length; i++) if (boxes[i].checked) accTypes.push(boxes[i].value);
+  function radio(name, dflt) {
+    var n = document.querySelector('input[name="' + name + '"]:checked');
+    return n ? n.value : dflt;
+  }
+  var originEl = el('inOrigin');
+  return {
+    origin: (originEl && originEl.value) ? originEl.value.trim() : '北京',
+    transport: radio('transport', 'auto'),
+    adults: parseInt(el('inAdults').value, 10) || 1,
+    kids: parseInt(el('inKids').value, 10) || 0,
+    kidAge: el('inKidAge').value,
+    budgetMode: radio('budgetMode', 'total'),
+    budget: parseFloat(el('inBudget').value) || 0,
+    currency: el('inCurrency').value,
+    accTypes: accTypes,
+    breakfast: el('inBreakfast').checked,
+    kitchen: el('inKitchen').checked,
+    relax: radio('relax', '适中平衡型'),
+    humidity: radio('humidity', '不限'),
+    temp: radio('temp', '温和'),
+    start: el('inDateStart').value,
+    end: el('inDateEnd').value
+  };
+}
+function setRadio(name, value) {
+  var list = document.querySelectorAll('input[name="' + name + '"]');
+  for (var i = 0; i < list.length; i++) list[i].checked = (list[i].value === value);
+  syncPickers();
+}
+function syncPickers() {
+  var bars = document.querySelectorAll('[data-picker]');
+  for (var b = 0; b < bars.length; b++) {
+    var picks = bars[b].querySelectorAll('.pick');
+    for (var i = 0; i < picks.length; i++) {
+      var input = picks[i].querySelector('input');
+      if (!input) continue;
+      picks[i].className = input.checked ? 'pick on' : 'pick';
+    }
+  }
+}
+function applyProfile(code) {
+  var p = PROFILES[code];
+  if (!p) return;
+  el('inOrigin').value = p.origin;
+  el('inAdults').value = p.adults;
+  el('inKids').value = p.kids;
+  el('inKidAge').value = p.kidAge;
+  el('inBudget').value = p.budget;
+  el('inCurrency').value = p.currency;
+  var boxes = document.querySelectorAll('.accType');
+  for (var i = 0; i < boxes.length; i++) boxes[i].checked = (p.acc.indexOf(boxes[i].value) >= 0);
+  el('inBreakfast').checked = p.breakfast;
+  el('inKitchen').checked = p.kitchen;
+  setRadio('transport', p.transport);
+  setRadio('budgetMode', p.budgetMode);
+  setRadio('relax', p.relax);
+  setRadio('humidity', p.humidity);
+  setRadio('temp', p.temp);
+  el('inDateStart').value = p.start;
+  el('inDateEnd').value = p.end;
+  el('profileDesc').textContent = p.desc;
+  var btns = document.querySelectorAll('.profile-btn');
+  for (var j = 0; j < btns.length; j++) {
+    btns[j].className = (btns[j].getAttribute('data-profile') === code) ? 'profile-btn active' : 'profile-btn';
+  }
+  syncPickers();
+  updateMoreSummary();
+}
+
+/* 折叠区摘要：让收起时也能一眼看到当前偏好 */
+function updateMoreSummary() {
+  var inp = readInputs();
+  var tr = { auto:'火车/飞机都看', plane:'只看飞机', train:'只看火车' }[inp.transport] || '两者都看';
+  var acc = inp.accTypes.length ? inp.accTypes.join('/') : '不限';
+  var el2 = el('moreSummary');
+  if (el2) {
+    el2.textContent = tr + ' · ' + (inp.budgetMode === 'total' ? '总' : '人均') + inp.budget + inp.currency +
+                      ' · ' + acc + ' · ' + inp.relax.replace('型', '') + ' · ' + inp.humidity + ' · ' + inp.temp;
+  }
+}
+
+/* ============================================================================
+   模块 2 · 推荐算法（完全沿用，未改动）
+   ============================================================================ */
+function resolveOrigin(raw) {
+  var name = (raw || '').trim() || '北京';
+  if (ORIGIN_COORDS[name]) return { name:name, coord:ORIGIN_COORDS[name], matched:true };
+  var keys = Object.keys(ORIGIN_COORDS), hit = null;
+  for (var i = 0; i < keys.length; i++) {
+    if (name.indexOf(keys[i]) >= 0 || keys[i].indexOf(name) >= 0) { hit = keys[i]; break; }
+  }
+  if (hit) return { name:hit, coord:ORIGIN_COORDS[hit], matched:true };
+  return { name:name, coord:ORIGIN_COORDS['北京'], matched:false };
+}
+function transportPlans(originInfo, city, inp) {
+  var km = Math.round(haversineKm(toLatLng(originInfo.coord), toLatLng(city.coord)));
+  var sf = seasonFactor(city, inp);
+  var trainMin = Math.round(km / 220 * 60 + 30);
+  var trainUnit;
+  if (km < 300)       trainUnit = 250;
+  else if (km < 800)  trainUnit = 250 + (km - 300) * 0.70;
+  else if (km < 1500) trainUnit = 600 + (km - 800) * 0.55;
+  else                trainUnit = 985 + (km - 1500) * 0.40;
+  var planeMin = Math.round(km / 800 * 60 + 120);
+  var planeUnit = (420 + km * 0.32) * sf;
+  var billable = inp.adults + inp.kids * 0.75;
+  return {
+    km: km, seasonFactor: sf,
+    train: { mode:'train', label:'火车（高铁）', unit:trainUnit, minutes:trainMin,
+             total:trainUnit * billable * 2, note: trainMin > 600 ? '车程较长，可考虑分段或过夜' : '当天可到' },
+    plane: { mode:'plane', label:'飞机', unit:planeUnit, minutes:planeMin,
+             total:planeUnit * billable * 2, note: km < 600 ? '短途飞行省时有限' : '省时明显' }
+  };
+}
+function pickPlan(plans, inp) {
+  if (inp.transport === 'train') return plans.train;
+  if (inp.transport === 'plane') return plans.plane;
+  return plans.train.total <= plans.plane.total ? plans.train : plans.plane;
+}
+function tripEstimate(city, inp, days) {
+  var heads = inp.adults + inp.kids;
+  var originInfo = resolveOrigin(inp.origin);
+  var plans = transportPlans(originInfo, city, inp);
+  var chosen = pickPlan(plans, inp);
+  var tier = inp.accTypes.length ? inp.accTypes[0] : '酒店';
+  var band = city.tiers[tier] || city.tiers['酒店'];
+  var price = band[0] * 0.7 + band[1] * 0.3;
+  var rooms = Math.max(1, Math.ceil(heads / 3));
+  var hotel = price * rooms * days;
+  var food = 120 * heads * days * (inp.relax === '躺平度假型' ? 1.2 : 1);
+  var act = city.actNeed * 200 * heads;
+  var total = chosen.total + hotel + food + act;
+  return { total:total, transport:chosen.total, hotel:hotel, food:food, act:act,
+           perPerson: total / Math.max(1, heads), perNight: price, rooms: rooms,
+           plans: plans, chosen: chosen, originInfo: originInfo, km: plans.km };
+}
+function seasonFactor(city, inp) {
+  var ms = monthsOf(inp.start, inp.end);
+  for (var i = 0; i < ms.length; i++) if (city.peak.indexOf(ms[i]) >= 0) return 1.25;
+  return 1.0;
+}
+function scoreBudget(city, inp, days) {
+  var trip = tripEstimate(city, inp, days);
+  var cap = (inp.budgetMode === 'perPerson')
+    ? inp.budget * (CURRENCY_RATE[inp.currency] || 1) * Math.max(1, inp.adults + inp.kids)
+    : inp.budget * (CURRENCY_RATE[inp.currency] || 1);
+  if (!cap) return { score:0.5, total:trip.total, cap:0, overshoot:0 };
+  var overshoot = (trip.total - cap) / cap;
+  var s = (trip.total <= cap) ? 0.85 + 0.15 * clamp(trip.total / cap, 0, 1)
+                              : clamp(1 - overshoot * 0.55, 0, 0.85);
+  return { score:clamp(s, 0, 1), total:trip.total, cap:cap, overshoot:overshoot };
+}
+function scoreStay(city, inp) {
+  var typeHit = 0.6;
+  if (inp.accTypes.length) {
+    typeHit = 0;
+    for (var i = 0; i < inp.accTypes.length; i++) {
+      if (city.acc.indexOf(inp.accTypes[i]) >= 0) { typeHit = 1; break; }
+    }
+  }
+  var bfHit = inp.breakfast ? (city.bf ? 1 : 0) : 1;
+  var kitHit = inp.kitchen ? ((city.kit && city.kit.length) ? 1 : 0) : 1;
+  var miss = (1 - typeHit) + (1 - bfHit) * 0.5 + (1 - kitHit) * 0.5;
+  var heads = inp.adults + inp.kids;
+  var totalStay = tripEstimate(city, inp, tripDays(inp.start, inp.end)).hotel;
+  var priceFactor = clamp(1.05 - totalStay / Math.max(1, heads * 1100), 0.35, 1);
+  return { score: clamp((1 - miss / 2) * 0.6 + priceFactor * 0.4, 0, 1),
+           typeHit:typeHit, bfHit:bfHit, kitHit:kitHit };
+}
+function scoreRelax(city, inp) {
+  var want = RELAX_VALUE[inp.relax] || 2;
+  var got = (city.relaxV !== undefined) ? city.relaxV : 2;
+  return { score: clamp(1 - Math.abs(want - got) / RELAX_TOL, 0, 1), want:want, got:got };
+}
+function scoreHumidity(city, inp, months) {
+  if (inp.humidity === '不限') return { score:0.5, disabled:true, value:null };
+  var sum = 0;
+  for (var i = 0; i < months.length; i++) sum += city.humid[months[i] - 1];
+  var normal = sum / months.length;
+  var live = REMOTE[city.name] ? REMOTE[city.name].humidityAdj : null;
+  var value = (live === undefined || live === null) ? normal : normal * 0.75 + live * 0.25;
+  var target = inp.humidity === '偏干燥' ? 30 : (inp.humidity === '偏湿润' ? 75 : 55);
+  return { score: clamp(1 - Math.abs(value - target) / (HUMID_TOL * 2), 0, 1), value:value, disabled:false };
+}
+function scoreTemp(city, inp, months, daysToTrip) {
+  var sum = 0;
+  for (var i = 0; i < months.length; i++) sum += city.normal[months[i] - 1];
+  var normal = sum / months.length;
+  var live = REMOTE[city.name] ? REMOTE[city.name].temp : null;
+  var useLive = (live !== undefined && live !== null && daysToTrip <= LIVE_TEMP_HORIZON_DAYS);
+  var mixed = useLive ? normal * 0.55 + live * 0.45 : normal;
+  var band = TEMP_BANDS[inp.temp] || TEMP_BANDS['温和'];
+  return { score: clamp(1 - Math.abs(mixed - band.t) / band.tol, 0, 1), value:mixed,
+           liveRaw: (live === undefined ? null : live), useLive: useLive };
+}
+function scoreDate(city, inp, months) {
+  var peakHit = 0, sum = 0, humSum = 0;
+  for (var i = 0; i < months.length; i++) {
+    if (city.peak.indexOf(months[i]) >= 0) peakHit++;
+    sum += city.normal[months[i] - 1];
+    humSum += city.humid[months[i] - 1];
+  }
+  var peakScore = clamp(1 - peakHit / months.length * 0.55, 0, 1);
+  var avgT = sum / months.length, avgH = humSum / months.length;
+  var comfort = clamp(1 - Math.abs(avgT - 20) / 22, 0, 1);
+  var rainy = clamp(1 - Math.max(0, avgH - 65) / 40, 0, 1);
+  var climate = comfort * 0.65 + rainy * 0.35;
+  return { score: clamp(peakScore * 0.55 + climate * 0.45, 0, 1), peakScore:peakScore, climate:climate };
+}
+function estimateRelaxV(city) {
+  var v = 2;
+  if (city.actNeed <= 2) v += 0.5;
+  if (city.acc.indexOf('度假村') >= 0) v += 0.5;
+  if (city.actNeed >= 3) v -= 0.5;
+  return clamp(v, 1, 3);
+}
+function scoreAll(inp) {
+  var days = tripDays(inp.start, inp.end);
+  var months = monthsOf(inp.start, inp.end);
+  var daysToTrip = 999;
+  var s = new Date(inp.start + 'T00:00:00');
+  if (!isNaN(s.getTime())) daysToTrip = Math.round((s - new Date()) / 86400000);
+  var totalWeight = 0;
+  for (var i = 0; i < DIMS.length; i++) {
+    if (DIMS[i].key === 'humidity' && inp.humidity === '不限') continue;
+    totalWeight += DIMS[i].weight;
+  }
+  var rows = [];
+  for (var c = 0; c < CITIES.length; c++) {
+    var city = CITIES[c];
+    city.relaxV = estimateRelaxV(city);
+    var parts = {
+      budget:   scoreBudget(city, inp, days),
+      stay:     scoreStay(city, inp),
+      relax:    scoreRelax(city, inp),
+      humidity: scoreHumidity(city, inp, months),
+      temp:     scoreTemp(city, inp, months, daysToTrip),
+      date:     scoreDate(city, inp, months)
+    };
+    var weighted = 0;
+    for (var d = 0; d < DIMS.length; d++) {
+      if (DIMS[d].key === 'humidity' && inp.humidity === '不限') continue;
+      weighted += (parts[DIMS[d].key].score || 0) * DIMS[d].weight;
+    }
+    var total = totalWeight > 0 ? weighted / totalWeight * 100 : 0;
+    rows.push({ city:city, parts:parts, total:total,
+                trip: tripEstimate(city, inp, days), days:days, months:months });
+  }
+  rows.sort(function (a, b) { return b.total - a.total; });
+  return rows.slice(0, MAX_RESULTS);
+}
+function reasonText(key, r, inp) {
+  var t = r.trip;
+  if (key === 'budget') {
+    return '从' + t.originInfo.name + '出发（约 ' + t.km + ' 公里，按' +
+           (t.chosen.mode === 'train' ? '火车' : '飞机') + '计），全家总花费约 ' + fmtMoney(t.total) + ' 元，贴合你的预算。';
+  }
+  if (key === 'stay') {
+    return '住宿有「' + r.city.acc.join(' / ') + '」可选，' +
+           (r.parts.stay.bfHit ? '含早满足；' : '含早偏弱；') +
+           (r.parts.stay.kitHit ? '还能做饭，带娃方便。' : '带厨房的房源较少。');
+  }
+  if (key === 'relax') {
+    return '整体节奏偏' + (r.city.relaxV >= 2.5 ? '躺平度假' : (r.city.relaxV >= 1.8 ? '适中平衡' : '紧凑打卡')) +
+           '，和你选的「' + inp.relax + '」最接近。';
+  }
+  if (key === 'humidity') {
+    return '出行月份常年湿度约 ' + Math.round(r.parts.humidity.value) + '%，正合你要的「' + inp.humidity + '」。';
+  }
+  if (key === 'temp') {
+    return '出行月份平均气温约 ' + r.parts.temp.value.toFixed(1) + '℃，最接近你要的「' + inp.temp + '」档。';
+  }
+  return '出行窗口' + (r.parts.date.peakScore > 0.75 ? '避开了当地旺季，人少价稳' : '正处于当地旺季，建议尽早订票') +
+         '，气候舒适度 ' + Math.round(r.parts.date.climate * 100) + ' 分。';
+}
+function buildReason(r, inp) {
+  var bestKey = 'budget', bestImpact = -1;
+  for (var i = 0; i < DIMS.length; i++) {
+    if (DIMS[i].key === 'humidity' && inp.humidity === '不限') continue;
+    var impact = ((r.parts[DIMS[i].key].score || 0) - 0.5) * DIMS[i].weight;
+    if (impact > bestImpact) { bestImpact = impact; bestKey = DIMS[i].key; }
+  }
+  return reasonText(bestKey, r, inp);
+}
+
+/* ============================================================================
+   模块 3 · 高德调用（串行限流 + 重试，沿用）
+   ============================================================================ */
+var REQ_GAP_MS = 400;
+var RETRY_BACKOFF_MS = [400, 800, 1600];
+var MAX_RETRY = 2;
+var LOAD_TOKEN = 0;
+var API_DEGRADED = [];
+var reqQueue = Promise.resolve();
+
+function sleep(ms) { return new Promise(function (r) { setTimeout(r, ms); }); }
+function enqueueRequest(fn) {
+  var run = reqQueue.then(function () { return sleep(REQ_GAP_MS); }).then(function () { return fn(); });
+  reqQueue = run.catch(function () {});
+  return run;
+}
+function jsonp(url, timeoutMs) {
+  return new Promise(function (resolve, reject) {
+    var cbName = '__amap_cb_' + Date.now() + '_' + Math.floor(Math.random() * 100000);
+    var script = document.createElement('script');
+    var done = false;
+    var timer = setTimeout(function () {
+      if (done) return; done = true; cleanup();
+      reject(new Error('高德接口超时（' + Math.round(timeoutMs / 1000) + ' 秒无响应）'));
+    }, timeoutMs);
+    function cleanup() {
+      clearTimeout(timer);
+      try { delete window[cbName]; } catch (e) { window[cbName] = undefined; }
+      if (script.parentNode) script.parentNode.removeChild(script);
+    }
+    window[cbName] = function (data) { if (done) return; done = true; cleanup(); resolve(data); };
+    script.onerror = function () {
+      if (done) return; done = true; cleanup();
+      reject(new Error('高德接口脚本加载失败（检查网络或 Key）'));
+    };
+    script.src = url + (url.indexOf('?') >= 0 ? '&' : '?') + 'callback=' + cbName;
+    document.body.appendChild(script);
+  });
+}
+function amapWeather(city) {
+  var key = el('amapKey').value.trim();
+  if (!key) return Promise.resolve(null);
+  var url = 'https://restapi.amap.com/v3/weather/weatherInfo?key=' + encodeURIComponent(key) +
+            '&city=' + city.adcode + '&extensions=base&output=JSON';
+  API_CALLS++;
+  return jsonp(url, 8000).then(function (res) {
+    if (!res || res.status !== '1') throw new Error('天气接口返回错误：' + ((res && res.info) || '未知'));
+    var live = res.lives && res.lives[0];
+    if (!live) throw new Error('天气接口未返回数据');
+    var t = parseFloat(live.temperature);
+    var precip = parseFloat(live.precipitation);
+    var adj = !isNaN(precip) ? clamp(45 + precip * 25, 20, 95)
+                             : ((live.weather || '').indexOf('雨') >= 0 ? 85 : 55);
+    return { temp: isNaN(t) ? null : t, weather: live.weather,
+             wind: live.winddirection + '风' + live.windpower + '级', humidityAdj: adj };
+  });
+}
+function amapPoi(city, keywords, types) {
+  var key = el('amapKey').value.trim();
+  if (!key) return Promise.resolve(null);
+  var ll = toLatLng(city.coord);
+  var url = 'https://restapi.amap.com/v3/place/text?key=' + encodeURIComponent(key) +
+            '&keywords=' + encodeURIComponent(keywords) +
+            (types ? '&types=' + encodeURIComponent(types) : '') +
+            '&city=' + encodeURIComponent(city.name) + '&citylimit=true&offset=6&page=1&extensions=base&output=JSON' +
+            '&location=' + encodeURIComponent(ll[0] + ',' + ll[1]);
+  API_CALLS++;
+  return jsonp(url, 8000).then(function (res) {
+    if (!res || res.status !== '1') throw new Error('POI 接口返回错误：' + ((res && res.info) || '未知'));
+    var pois = res.pois || [], out = [];
+    for (var i = 0; i < pois.length && i < 4; i++) {
+      var p = pois[i];
+      out.push({
+        name: p.name,
+        type: (p.type || '').split(';').pop(),
+        addr: typeof p.address === 'string' ? p.address : '',
+        rating: (p.biz_ext && p.biz_ext.rating) ? p.biz_ext.rating : '',
+        cost: (p.biz_ext && p.biz_ext.cost) ? p.biz_ext.cost : ''
+      });
+    }
+    return out;
+  });
+}
+function isRateLimitError(err) {
+  var m = ((err && err.message) || '') + '';
+  var keys = ['CUQPS', 'QPS', 'QUOTA', 'LIMIT', 'TOO_FREQUENT', 'FREQUENT', '超时', 'TIMEOUT', '脚本加载失败'];
+  for (var i = 0; i < keys.length; i++) if (m.toUpperCase().indexOf(keys[i].toUpperCase()) >= 0) return true;
+  return false;
+}
+async function apiCallWithRetry(label, callFn) {
+  var attempt = 0, lastErr = null;
+  while (attempt <= MAX_RETRY) {
+    try { return await enqueueRequest(callFn); }
+    catch (err) {
+      lastErr = err;
+      if (!isRateLimitError(err) || attempt === MAX_RETRY) break;
+      var waitMs = RETRY_BACKOFF_MS[Math.min(attempt, RETRY_BACKOFF_MS.length - 1)];
+      attempt++;
+      setStatus('real', '真实数据（重试中）',
+        '[' + label + '] 触到高德 QPS 限制，' + waitMs + 'ms 后发起第 ' + attempt + ' 次重试……');
+      await sleep(waitMs);
+    }
+  }
+  throw lastErr;
+}
+async function loadRemote(topRows) {
+  var key = el('amapKey').value.trim();
+  var myToken = ++LOAD_TOKEN;
+  REMOTE = {}; API_CALLS = 0; API_MSG = ''; API_DEGRADED = [];
+  if (!key) {
+    loadingCards = false;
+    setStatus('mock', '示例数据', '未填高德 Key，天气与活动地点使用内置示例数据，推荐逻辑照常运行。');
+    render(scoreAll(readInputs()));
+    return;
+  }
+  var targets = topRows.slice(0, 6);
+  var tasks = [];
+  for (var i = 0; i < targets.length; i++) {
+    (function (city) {
+      tasks.push({ city:city, what:'天气', fn:function () { return amapWeather(city); } });
+      tasks.push({ city:city, what:'景点', fn:function () { return amapPoi(city, '景点', '110000'); } });
+      tasks.push({ city:city, what:'餐饮', fn:function () { return amapPoi(city, '美食', '050000'); } });
+    })(targets[i].city);
+  }
+  var total = tasks.length;
+  try {
+    setStatus('real', '真实数据（0/' + total + '）',
+      '正在串行请求高德接口，每个请求间隔 ' + REQ_GAP_MS + 'ms 以规避 QPS 限制，失败自动重试最多 ' + MAX_RETRY + ' 次。');
+    showSkeleton(Math.min(targets.length, 6));
+    for (var t = 0; t < total; t++) {
+      if (myToken !== LOAD_TOKEN) return;
+      var task = tasks[t], city = task.city;
+      try {
+        var data = await apiCallWithRetry(city.name + ' ' + task.what, task.fn);
+        REMOTE[city.name] = REMOTE[city.name] || {};
+        if (task.what === '天气') {
+          if (data) {
+            REMOTE[city.name].temp = data.temp;
+            REMOTE[city.name].weather = data.weather;
+            REMOTE[city.name].wind = data.wind;
+            REMOTE[city.name].humidityAdj = data.humidityAdj;
+          }
+        } else if (task.what === '景点') {
+          REMOTE[city.name].poiAttraction = data || [];
+        } else {
+          REMOTE[city.name].poiFood = data || [];
+        }
+      } catch (err) {
+        API_DEGRADED.push({ city: city.name, what: task.what, reason: (err && err.message) || '未知错误' });
+      }
+      if (myToken !== LOAD_TOKEN) return;
+      setStatus('real', '真实数据（' + (t + 1) + '/' + total + '）',
+        '正在请求『' + city.name + ' ' + task.what + '』；每次请求间隔 ' + REQ_GAP_MS + 'ms。' +
+        (API_DEGRADED.length ? '　已降级 ' + API_DEGRADED.length + ' 项。' : ''));
+    }
+    if (myToken !== LOAD_TOKEN) return;
+    var degradedText = '';
+    if (API_DEGRADED.length) {
+      var byCity = {};
+      for (var d = 0; d < API_DEGRADED.length; d++) {
+        var it = API_DEGRADED[d];
+        byCity[it.city] = byCity[it.city] || [];
+        byCity[it.city].push(it.what + '：' + it.reason);
+      }
+      var ps = [];
+      for (var cn in byCity) if (Object.prototype.hasOwnProperty.call(byCity, cn)) ps.push(cn + '（' + byCity[cn].join('；') + '）');
+      degradedText = ps.join('　|　');
+      API_MSG = degradedText;
+    }
+    var okCities = 0;
+    for (var n = 0; n < targets.length; n++) {
+      var rr = REMOTE[targets[n].city.name];
+      if (rr && (rr.weather || (rr.poiAttraction && rr.poiAttraction.length) || (rr.poiFood && rr.poiFood.length))) okCities++;
+    }
+    if (okCities === 0) setStatus('err', '已降级为示例数据', '重试 ' + MAX_RETRY + ' 次后仍失败。城市与原因：' + (degradedText || '未知'));
+    else if (degradedText) setStatus('real', '真实数据（' + okCities + '/' + targets.length + ' 个成功，部分降级）',
+      '重试 ' + MAX_RETRY + ' 次后仍失败：' + degradedText);
+    else setStatus('real', '真实数据（' + okCities + ' 个目的地）',
+      '共 ' + API_CALLS + ' 次串行调用，每次间隔 ' + REQ_GAP_MS + 'ms。天气取实时气温与降水，活动与餐饮取 POI 搜索结果。');
+
+    loadingCards = false;
+    render(scoreAll(readInputs()));
+  } catch (err) {
+    loadingCards = false;
+    if (myToken !== LOAD_TOKEN) return;
+    setStatus('err', '已降级为示例数据', '未预期错误：' + (err && err.message));
+    render(scoreAll(readInputs()));
+  }
+}
+
+/* ============================================================================
+   模块 4 · 卡片渲染（信息分层：默认精简，细节进详情页）
+   ============================================================================ */
+function showSkeleton(n) {
+  loadingCards = true;
+  var html = '';
+  for (var i = 0; i < n; i++) {
+    html += '<div class="skeleton">' +
+      '<div class="sk-visual sk-block"></div>' +
+      '<div class="sk-body">' +
+        '<div class="sk-line w40 sk-block"></div>' +
+        '<div class="sk-line w85 sk-block"></div>' +
+        '<div class="sk-row"><div class="sk-box sk-block"></div><div class="sk-box sk-block"></div></div>' +
+      '</div>' +
+    '</div>';
+  }
+  el('cards').innerHTML = html;
+  el('resultCount').textContent = '正在获取真实数据…';
+}
+function emptyState() {
+  return '<div class="empty">' +
+    '<div class="empty-art"><span class="ea-sun"></span><span class="ea-icons">🧳 🌤️</span></div>' +
+    '<h3>还没有可以推荐的目的地</h3>' +
+    '<p>试着放宽预算、把出行日期调整到 3 天以上，或者把温度需求换成相邻的档位，再看看吧。</p>' +
+  '</div>';
+}
+
+/* 出行方案：默认只在卡片上显示一行对比，详细方案在详情页 */
+function planSummaryLine(r, inp) {
+  var P = r.trip.plans, chosen = r.trip.chosen;
+  var fastest = (P.train.minutes <= P.plane.minutes) ? '火车' : '飞机';
+  var cheapest = (P.train.total <= P.plane.total) ? '火车' : '飞机';
+  if (inp.transport === 'train') return '只看火车：往返约 ' + fmtMoney(P.train.total) + ' 元，单程约 ' + fmtMinutes(P.train.minutes);
+  if (inp.transport === 'plane') return '只看飞机：往返约 ' + fmtMoney(P.plane.total) + ' 元，单程约 ' + fmtMinutes(P.plane.minutes);
+  return '火车 ' + fmtMoney(P.train.total) + ' 元 / ' + fmtMinutes(P.train.minutes) +
+         '　·　飞机 ' + fmtMoney(P.plane.total) + ' 元 / ' + fmtMinutes(P.plane.minutes) +
+         '　（' + fastest + '更省时，' + cheapest + '更省钱；按' + (chosen.mode === 'train' ? '火车' : '飞机') + '计费）';
+}
+
+/* 详情页里的完整出行方案（机票 / 火车并排，标出更省时 / 更省钱） */
+function transportBlock(r, inp) {
+  var P = r.trip.plans, chosen = r.trip.chosen;
+  var fastest = (P.train.minutes <= P.plane.minutes) ? 'train' : 'plane';
+  var cheapest = (P.train.total <= P.plane.total) ? 'train' : 'plane';
+  function box(plan, isFast, isCheap) {
+    var isChosen = (chosen.mode === plan.mode);
+    var tags = '';
+    if (inp.transport === 'auto') {
+      if (isFast) tags += '<span class="mini time">更省时</span>';
+      if (isCheap) tags += '<span class="mini cost">更省钱</span>';
+      if (isChosen) tags += '<span class="mini pick">按此计费</span>';
+    }
+    return '<div class="plan' + (isChosen && inp.transport === 'auto' ? ' chosen' : '') + '">' +
+      '<div class="plan-head">' + (plan.mode === 'train' ? '🚄 ' : '✈️ ') + plan.label + tags + '</div>' +
+      '<div class="plan-line">' + r.trip.originInfo.name + ' → ' + r.city.name + '</div>' +
+      '<div class="plan-line">' + (plan.mode === 'train' ? '车程' : '飞行') + '约 ' + fmtMinutes(plan.minutes) + '</div>' +
+      '<div class="plan-price">' + fmtMoney(plan.total) + ' 元</div>' +
+      '<div class="plan-line">往返合计 · 每人单程 ' + fmtMoney(plan.unit) + ' 元</div>' +
+      '<div class="plan-line muted">' + plan.note + (P.seasonFactor > 1 ? '；旺季价上浮 25%' : '') + '</div>' +
+    '</div>';
+  }
+  var html = '<div class="plans">';
+  if (inp.transport === 'plane') html += box(P.plane, true, true);
+  else if (inp.transport === 'train') html += box(P.train, true, true);
+  else html += box(P.train, fastest === 'train', cheapest === 'train') + box(P.plane, fastest === 'plane', cheapest === 'plane');
+  html += '</div>';
+  html += '<div class="muted" style="margin-top:8px">' + r.trip.originInfo.name + ' 到 ' + r.city.name +
+          '直线距离约 ' + P.km + ' 公里；票价为示例数据（未接携程）。</div>';
+  return html;
+}
+
+/* 【卡片分层】默认卡片只显示：图位 / 名称 / 匹配分 / 一句话理由 / 价格区间 */
+function renderCard(r, index, inp) {
+  var c = r.city;
+  var tier = inp.accTypes.length ? inp.accTypes[0] : '酒店';
+  var band = c.tiers[tier] || c.tiers['酒店'];
+  var perNight = band[0] * 0.7 + band[1] * 0.3;
+
+  /* 图位：优先用 assets/城市图/<城市名>.jpg 实景图；没有照片就用该城市的地标插画 */
+  var hasPhoto = photoCheck(c.name, function () { safeRecompute(); });
+  var visualStyle = hasPhoto ? '' : ('background:' + gradientOf(c.name));
+  var photoLayer = hasPhoto
+    ? '<div class="reco-photo" style="background-image:url(\'' + encodeURI(cityPhotoUrl[c.name]) + '\')"></div>' +
+      '<div class="reco-tint"></div>'
+    : citySceneSVG(c.name) + '<div class="reco-scene-tint"></div>';
+
+  return '<article class="reco">' +
+    '<div class="reco-visual' + (hasPhoto ? ' has-photo' : '') + ' has-scene" style="' + visualStyle + '">' +
+      photoLayer +
+      '<span class="rv-icon">' + c.emoji + '</span>' +
+      '<span class="rv-note">' + c.prov + '</span>' +
+      '<div class="match-badge"><b>' + r.total.toFixed(1) + '</b><span>匹配度</span></div>' +
+    '</div>' +
+    '<div class="reco-body">' +
+      '<div class="reco-title-row">' +
+        '<span class="reco-title">' + c.name + '</span>' +
+        '<span class="reco-prov">' + c.prov + '</span>' +
+      '</div>' +
+      '<div class="reco-reason">' + buildReason(r, inp) + '</div>' +
+      /* 价格区间：默认层展示的核心信息 */
+      '<div class="price-row">' +
+        '<div class="price-cell">' +
+          '<div class="pc-label">住宿每晚均价</div>' +
+          '<div class="pc-value">' + fmtMoney(band[0]) + '–' + fmtMoney(band[1]) + '</div>' +
+          '<div class="pc-sub">' + tier + ' · 需 ' + r.trip.rooms + ' 间（估值 ' + fmtMoney(perNight) + '/晚）</div>' +
+        '</div>' +
+        '<div class="price-cell">' +
+          '<div class="pc-label">全家总花费</div>' +
+          '<div class="pc-value">约 ' + fmtMoney(r.trip.total) + '</div>' +
+          '<div class="pc-sub">' + r.days + ' 天 · ' + (inp.adults + inp.kids) + ' 人 · 人均 ' + fmtMoney(r.trip.perPerson) + '</div>' +
+        '</div>' +
+      '</div>' +
+      '<div class="reco-teaser muted">' + planSummaryLine(r, inp) + '</div>' +
+    '</div>' +
+    '<div class="reco-actions">' +
+      '<button class="btn btn-line js-detail" data-city="' + c.name + '">查看详情</button>' +
+      '<button class="btn js-guide" data-city="' + c.name + '">生成攻略</button>' +
+    '</div>' +
+  '</article>';
+}
+
+function render(rows) {
+  var inp = readInputs();
+  LAST_ROWS = rows || [];
+  if (!rows || !rows.length) {
+    el('cards').innerHTML = emptyState();
+    el('resultCount').textContent = '0 个结果';
+    return;
+  }
+  var html = '';
+  for (var i = 0; i < rows.length; i++) {
+    try { html += renderCard(rows[i], i, inp); } catch (e) {}
+  }
+  el('cards').innerHTML = html;
+
+  var heads = inp.adults + inp.kids;
+  el('resultCount').textContent = '共 ' + rows.length + ' 个（上限 ' + MAX_RESULTS + ' 个）';
+  el('caliberNote').textContent = '出发地：' + resolveOrigin(inp.origin).name +
+    '　出行方式：' + (inp.transport === 'auto' ? '火车 / 飞机都看' : (inp.transport === 'train' ? '只看火车' : '只看飞机')) +
+    '　预算：' + (inp.budgetMode === 'total' ? '总预算 ' : '人均预算 ') + inp.budget + ' ' + inp.currency +
+    '　' + heads + ' 人　' + tripDays(inp.start, inp.end) + ' 天';
+  el('tripDaysNote').textContent = '行程天数：' + tripDays(inp.start, inp.end) + ' 天（自动计算，攻略最多按 5 天生成）';
+
+  var oi = resolveOrigin(inp.origin);
+  el('originNote').textContent = oi.matched
+    ? '已识别出发地：' + oi.name + '，火车 / 飞机时长与票价按直线距离推算。'
+    : '「' + inp.origin + '」不在内置坐标表内，暂按北京坐标估算距离，票价为近似值。';
+  updateMoreSummary();
+}
+function setStatus(kind, badgeText, statusText) {
+  var b = el('srcBadge');
+  b.className = 'badge ' + kind;
+  b.textContent = badgeText;
+  var line = el('statusLine');
+  line.className = 'status-line' + (kind === 'err' ? ' warn' : '');
+  line.textContent = statusText;
+  el('apiBadge').textContent = '接口 ' + API_CALLS + ' 次';
+}
+
+/* ============================================================================
+   模块 5 · 【详情页】：机票 / 火车、活动、餐饮、住宿、风俗、其他活动
+   ============================================================================ */
+function detailActivities(city, inp) {
+  var remote = REMOTE[city.name] || {};
+  var list = [];
+  var ageMap = { '0-2':'0–2 岁', '3-6':'3–6 岁', '7-12':'7–12 岁', '13-17':'13–17 岁' };
+  var ageText = ageMap[inp.kidAge] || '全年龄';
+  var slots = ['上午', '下午', '晚上'];
+  var durations = ['2 小时', '3 小时', '2.5 小时', '1.5 小时'];
+  if (remote.poiAttraction && remote.poiAttraction.length) {
+    for (var i = 0; i < remote.poiAttraction.length; i++) {
+      var p = remote.poiAttraction[i];
+      list.push({ name:p.name, slot:slots[i % slots.length], age:ageText,
+                  dur:durations[i % durations.length],
+                  note:(p.type || '景点') + (p.rating ? ' · 评分 ' + p.rating : '') + (p.addr ? ' · ' + p.addr : '') });
+    }
+  } else {
+    for (var j = 0; j < city.act.length; j++) {
+      list.push({ name:city.act[j], slot:slots[j % slots.length], age:ageText,
+                  dur:durations[j % durations.length], note:'示例条目 · 填入高德 Key 后替换为真实地点' });
+    }
+  }
+  return list;
+}
+function detailRestaurants(city) {
+  var remote = REMOTE[city.name] || {};
+  var list = [];
+  var cuisines = ['本地菜', '家常菜', '面食 / 小吃', '融合菜'];
+  if (remote.poiFood && remote.poiFood.length) {
+    for (var i = 0; i < remote.poiFood.length; i++) {
+      var p = remote.poiFood[i];
+      var cost = p.cost ? (Math.round(p.cost * 0.8) + '–' + Math.round(p.cost * 1.3) + ' 元') : '60–120 元';
+      list.push({ name:p.name, cuisine:p.type || cuisines[i % cuisines.length], cost:cost,
+                  kid:(parseFloat(p.rating) >= 4 || i === 0) ? '适合（有儿童餐具）' : '一般' });
+    }
+  } else {
+    for (var j = 0; j < city.eat.length; j++) {
+      list.push({ name:city.eat[j], cuisine:cuisines[j % cuisines.length], cost:'60–130 元', kid:'适合（示例）' });
+    }
+  }
+  return list;
+}
+function detailStays(city, inp) {
+  var types = inp.accTypes.length ? inp.accTypes.slice() : ['酒店'];
+  var known = ['酒店', '民宿', '亲子房', '度假村'];
+  for (var k = 0; k < known.length; k++) if (types.indexOf(known[k]) < 0) types.push(known[k]);
+  var list = [];
+  for (var i = 0; i < types.length && i < 4; i++) {
+    var t = types[i];
+    var band = city.tiers[t] || city.tiers['酒店'];
+    var available = city.acc.indexOf(t) >= 0;
+    list.push({
+      name: city.name + (t === '酒店' ? '市区连锁酒店' : (t === '民宿' ? '老城民宿' : (t === '亲子房' ? '亲子主题房' : '近郊度假村'))),
+      type: t,
+      loc: city.name + '热门区域（近主要景点 3–8 公里）',
+      room: (inp.adults + inp.kids > 3 ? '家庭房 / 双卧套房' : '大床房 + 加床 / 亲子房'),
+      relax: (t === '度假村') ? '躺平度假' : (t === '民宿' ? '适中平衡' : '紧凑打卡'),
+      price: fmtMoney(band[0] * 0.7 + band[1] * 0.3) + ' 元 / 晚',
+      note: available ? '' : '该城市暂无此类房源（示例）'
+    });
+  }
+  return list;
+}
+function openDetail(cityName) {
+  var r = null;
+  for (var i = 0; i < LAST_ROWS.length; i++) if (LAST_ROWS[i].city.name === cityName) { r = LAST_ROWS[i]; break; }
+  if (!r) return;
+  var inp = readInputs();
+  var c = r.city;
+  var remote = REMOTE[c.name] || {};
+
+  var acts = detailActivities(c, inp), actRows = '';
+  for (var a = 0; a < acts.length; a++) {
+    actRows += '<tr><td><b>' + acts[a].name + '</b><span class="sub">' + acts[a].note + '</span></td>' +
+               '<td>' + acts[a].slot + '</td><td>' + acts[a].age + '</td><td>' + acts[a].dur + '</td></tr>';
+  }
+  var eats = detailRestaurants(c), eatRows = '';
+  for (var e = 0; e < eats.length; e++) {
+    eatRows += '<tr><td><b>' + eats[e].name + '</b></td><td>' + eats[e].cuisine + '</td>' +
+               '<td>' + eats[e].cost + '</td><td>' + eats[e].kid + '</td></tr>';
+  }
+  var stays = detailStays(c, inp), stayRows = '';
+  for (var s = 0; s < stays.length; s++) {
+    stayRows += '<tr><td><b>' + stays[s].name + '</b>' + (stays[s].note ? '<span class="sub">' + stays[s].note + '</span>' : '') + '</td>' +
+      '<td>' + stays[s].type + '</td><td>' + stays[s].loc + '</td><td>' + stays[s].room + '</td>' +
+      '<td><span class="pill green">' + stays[s].relax + '</span></td><td>' + stays[s].price + '</td></tr>';
+  }
+  var customHtml = '';
+  for (var u = 0; u < c.customs.length; u++) {
+    customHtml += '<div class="custom-item"><div class="ci-name">' + c.customs[u].name + '</div>' +
+      '<div class="ci-desc">' + c.customs[u].desc + '</div>' +
+      '<div class="ci-note">注意事项：' + c.customs[u].note + '</div></div>';
+  }
+  var extraPills = '';
+  for (var x = 0; x < c.extras.length; x++) extraPills += '<span class="pill">' + c.extras[x] + '</span>';
+
+  el('detailHeadTitle').textContent = c.name + ' · 目的地详情';
+  el('detailBody').innerHTML =
+    '<div class="detail-visual" style="background:' + gradientOf(c.name) + '">' +
+      '<span class="dv-icon">' + c.emoji + '</span>' +
+      '<span class="dv-note">示意图位 · ' + c.prov + '</span></div>' +
+    '<div class="detail-title"><h2>' + c.name + '</h2><span class="muted">' + c.prov + '</span></div>' +
+    '<div class="detail-reason">' + buildReason(r, inp) + '</div>' +
+    '<div class="detail-meta">' +
+      '<span class="m">匹配度 <b>' + r.total.toFixed(1) + '</b></span>' +
+      '<span class="m">' + r.days + ' 天行程</span>' +
+      '<span class="m">总花费约 <b>' + fmtMoney(r.trip.total) + '</b> 元</span>' +
+      (remote.weather ? '<span class="m">' + remote.weather + ' ' + remote.temp + '℃</span>' : '') +
+    '</div>' +
+
+    /* 机票 / 火车：从卡片移到这里 */
+    '<div class="dcard"><h4>🚄✈️ 出行方案</h4>' + transportBlock(r, inp) + '</div>' +
+
+    '<div class="dcard"><h4>🗺️ 当地活动</h4>' +
+      '<table class="dtable"><tr><th>活动名称</th><th>建议时段</th><th>适合年龄</th><th>预计耗时</th></tr>' +
+      actRows + '</table></div>' +
+
+    '<div class="dcard"><h4>🍽️ 餐饮推荐</h4>' +
+      '<table class="dtable"><tr><th>餐厅名</th><th>菜系</th><th>人均价格区间</th><th>是否适合儿童</th></tr>' +
+      eatRows + '</table></div>' +
+
+    '<div class="dcard"><h4>🏡 住宿推荐</h4>' +
+      '<table class="dtable"><tr><th>名称</th><th>类型</th><th>位置</th><th>房型</th><th>松弛感</th><th>每晚价格</th></tr>' +
+      stayRows + '</table></div>' +
+
+    '<div class="dcard"><h4>🧧 当地风俗</h4>' + customHtml + '</div>' +
+
+    '<div class="dcard"><h4>🎪 其他活动</h4><div class="pills">' + extraPills + '</div>' +
+      '<div class="muted" style="margin-top:10px">含节庆、市集、演出与户外体验，具体时间以当地公告为准。</div></div>' +
+
+    '<div class="dcard"><h4>💰 本行程预算速览</h4>' +
+      '<div class="foot-line"><span>交通（' + (r.trip.chosen.mode === 'train' ? '火车' : '飞机') + '）</span><b>' + fmtMoney(r.trip.transport) + ' 元</b></div>' +
+      '<div class="foot-line"><span>住宿</span><b>' + fmtMoney(r.trip.hotel) + ' 元</b></div>' +
+      '<div class="foot-line"><span>餐饮</span><b>' + fmtMoney(r.trip.food) + ' 元</b></div>' +
+      '<div class="foot-line"><span>活动</span><b>' + fmtMoney(r.trip.act) + ' 元</b></div>' +
+      '<div class="foot-line foot-total"><span>合计（' + r.days + ' 天 / ' + (inp.adults + inp.kids) + ' 人）</span><b>' + fmtMoney(r.trip.total) + ' 元</b></div>' +
+    '</div>' +
+    '<div style="margin-top:18px"><button class="btn btn-fill js-guide" data-city="' + c.name + '">生成这个目的地的行程攻略</button></div>';
+
+  el('detailModal').className = 'modal show';
+  el('overlay').className = 'overlay show';
+  document.body.style.overflow = 'hidden';
+}
+
+/* ============================================================================
+   模块 6 · 【攻略生成】：逐日行程 + 天气 + 预算四项（沿用）
+   ============================================================================ */
+function buildGuide(cityName, r, inp) {
+  if (!r) return '<div class="muted">未找到该目的地的数据，请关闭后重试。</div>';
+  var c = r.city;
+  var days = tripDays(inp.start, inp.end);
+  if (!(days >= 1)) days = 3;
+  days = Math.min(days, 5);
+  if (days < 2) days = 2;
+
+  var remote = REMOTE[cityName] || {};
+  var acts = [], eats = [];
+  if (remote.poiAttraction && remote.poiAttraction.length) {
+    acts = remote.poiAttraction.slice();
+    acts.sort(function (a, b) { return (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0); });
+  } else {
+    for (var i = 0; i < c.act.length; i++) acts.push({ name:c.act[i], rating:'', type:'示例条目' });
+  }
+  if (remote.poiFood && remote.poiFood.length) {
+    eats = remote.poiFood.slice();
+    eats.sort(function (a, b) { return (parseFloat(b.rating) || 0) - (parseFloat(a.rating) || 0); });
+  } else {
+    for (var j = 0; j < c.eat.length; j++) eats.push({ name:c.eat[j], rating:'', type:'示例条目', cost:'' });
+  }
+
+  var perDay = (inp.relax === '躺平度假型') ? 2 : ((inp.relax === '紧凑打卡型') ? 4 : 3);
+  var perDayNote = (inp.relax === '躺平度假型') ? '1–2 个' : ((inp.relax === '紧凑打卡型') ? '3–4 个' : '2–3 个');
+  var relaxIco = (inp.relax === '躺平度假型') ? '🛋️' : ((inp.relax === '紧凑打卡型') ? '🏃' : '🚶');
+
+  var ai = 0, ei = 0;
+  function takeAct() { var v = acts[ai % acts.length]; ai++; return v; }
+  function takeEat() { var v = eats[ei % eats.length]; ei++; return v; }
+  function actText(item) {
+    var extra = [];
+    if (item.rating) extra.push('评分 ' + item.rating);
+    if (item.type === '示例条目') extra.push('示例条目 · 未接高德 POI');
+    else if (item.type) extra.push(item.type);
+    return item.name + (extra.length ? '<span class="sub">' + extra.join(' · ') + '</span>' : '');
+  }
+  function eatText(item) {
+    var extra = [];
+    if (item.cost) extra.push('人均 ' + item.cost + ' 元');
+    if (item.rating) extra.push('评分 ' + item.rating);
+    if (item.type === '示例条目') extra.push('示例条目 · 未接高德 POI');
+    else if (item.type) extra.push(item.type);
+    return item.name + (extra.length ? '<span class="sub">' + extra.join(' · ') + '</span>' : '');
+  }
+  function dateSub(d) {
+    var s = new Date(inp.start + 'T00:00:00');
+    if (isNaN(s.getTime())) return '';
+    var cur = new Date(s.getTime() + d * 86400000);
+    var wk = ['周日','周一','周二','周三','周四','周五','周六'][cur.getDay()];
+    var mm = ('0' + (cur.getMonth() + 1)).slice(-2);
+    var dd = ('0' + cur.getDate()).slice(-2);
+    return cur.getFullYear() + '-' + mm + '-' + dd + ' ' + wk;
+  }
+
+  var body = '';
+  var quota = 0, usedToday = 0;
+  function addActive(kind) {
+    if (usedToday >= quota) return null;
+    usedToday++;
+    return (kind === 'eat') ? eatText(takeEat()) : actText(takeAct());
+  }
+  function slotRow(name, content, isFixed) {
+    if (!content) {
+      return '<div class="slot empty"><span class="slot-label">' + name + '</span>' +
+             '<span class="slot-body">自由活动 / 留白（按' + perDayNote + '的松弛度安排）</span></div>';
+    }
+    return '<div class="slot' + (isFixed ? ' fixed' : '') + '"><span class="slot-label">' + name + '</span>' +
+           '<span class="slot-body">' + content + '</span></div>';
+  }
+
+  for (var d = 0; d < days; d++) {
+    var isFirst = (d === 0), isLast = (d === days - 1);
+    var fixedCount = (isFirst ? 1 : 0) + (isLast ? 1 : 0);
+    quota = Math.max(0, perDay - fixedCount);
+    usedToday = 0;
+
+    var block = '<div class="day"><div class="day-head"><b>第 ' + (d + 1) + ' 天</b><span>' + dateSub(d) + '</span></div>';
+    var am;
+    if (isFirst) am = '<b>抵达 + 入住</b><span class="sub">到达 ' + c.name + '，办理入住、放行李，先让老人孩子缓一缓</span>';
+    else am = addActive('act');
+    block += slotRow('上午', am, isFirst);
+
+    var pm;
+    if (isLast) pm = '<b>返程</b><span class="sub">预留 3 小时前往车站 / 机场，' +
+      (inp.transport === 'plane' ? '飞机建议提前 2 小时到机场' : '火车建议提前 40 分钟进站') + '</span>';
+    else pm = addActive('act');
+    block += slotRow('下午', pm, isLast);
+
+    block += slotRow('晚上', addActive('eat'), false);
+    block += '</div>';
+    body += block;
+  }
+
+  var monthT = 0, monthH = 0;
+  for (var m = 0; m < r.months.length; m++) {
+    monthT += c.normal[r.months[m] - 1];
+    monthH += c.humid[r.months[m] - 1];
+  }
+  monthT = monthT / r.months.length;
+  monthH = monthH / r.months.length;
+  var weatherLine = '出行月份 ' + r.months.join(' / ') + ' 月　常年均温 ' + monthT.toFixed(1) +
+                    '℃　常年湿度 ' + Math.round(monthH) + '%';
+  weatherLine += '<br>' + (remote.weather
+    ? '高德实时天气：' + remote.weather + '，' + remote.temp + '℃' + (remote.wind ? '，' + remote.wind : '')
+    : '实时天气：未获取（填入高德 Key 后显示）');
+
+  var t4 = r.trip, sum4 = t4.transport + t4.hotel + t4.food + t4.act;
+  function pct(v) { return sum4 > 0 ? Math.round(v / sum4 * 100) : 0; }
+  function line4(label, v) {
+    return '<div class="foot-line"><span>' + label + '　<small class="muted">' + pct(v) + '%</small></span><b>' +
+           fmtMoney(v) + ' 元</b></div>';
+  }
+  var cap = (inp.budgetMode === 'perPerson')
+    ? inp.budget * (CURRENCY_RATE[inp.currency] || 1) * (inp.adults + inp.kids)
+    : inp.budget * (CURRENCY_RATE[inp.currency] || 1);
+  var budgetHtml = line4('① 交通（' + (t4.chosen.mode === 'train' ? '火车' : '飞机') + '）', t4.transport) +
+                   line4('② 住宿', t4.hotel) + line4('③ 餐饮', t4.food) + line4('④ 活动', t4.act);
+  if (cap > 0) {
+    var diff = cap - sum4;
+    budgetHtml += '<div class="foot-line foot-total"><span>' + (diff >= 0 ? '预算结余' : '超出预算') +
+                  '</span><b>' + fmtMoney(Math.abs(diff)) + ' 元</b></div>';
+  }
+
+  var wrapNote = '';
+  if (ai > acts.length || ei > eats.length) {
+    wrapNote = '<div class="muted" style="margin-top:10px">可用条目少于排程所需，部分时段出现重复；' +
+               '填入高德 Key 可获取更多真实地点。</div>';
+  }
+
+  return '<div class="guide-summary"><b>' + c.name + '　' + days + ' 天 ' + (days - 1) + ' 晚</b><br>' +
+         relaxIco + ' 节奏：' + inp.relax + '（每天 ' + perDayNote + ' 个活动）<br>' +
+         '📍 来源：' + ((acts[0] && acts[0].rating) ? '高德 POI + 规则排程' : '示例条目 + 规则排程') + '</div>' +
+         body +
+         '<div class="guide-foot"><h4>🌤️ 出行期间天气</h4>' +
+           '<div class="foot-line" style="display:block">' + weatherLine + '</div>' +
+           '<h4 style="margin-top:14px">💰 预算四项估算</h4>' + budgetHtml +
+           '<div class="foot-line foot-total"><span>四项合计（' + days + ' 天 / ' + (inp.adults + inp.kids) + ' 人）</span><b>' +
+             fmtMoney(sum4) + ' 元</b></div>' +
+           '<div class="muted" style="margin-top:10px">体验版：票价为示例数据，未接入真实预订。</div>' +
+         '</div>' + wrapNote;
+}
+function openGuide(cityName) {
+  var r = null;
+  for (var i = 0; i < LAST_ROWS.length; i++) if (LAST_ROWS[i].city.name === cityName) { r = LAST_ROWS[i]; break; }
+  if (!r) return;
+  var inp = readInputs();
+  var days = Math.min(Math.max(tripDays(inp.start, inp.end), 2), 5);
+  el('guideHeadTitle').textContent = cityName + ' · ' + days + ' 天 ' + (days - 1) + ' 晚 行程攻略';
+  el('guideBody').innerHTML = buildGuide(cityName, r, inp);
+  el('guideModal').className = 'modal show';
+  el('overlay').className = 'overlay show';
+  document.body.style.overflow = 'hidden';
+}
+function hideModals() {
+  el('detailModal').className = 'modal';
+  el('guideModal').className = 'modal';
+  el('overlay').className = 'overlay';
+  document.body.style.overflow = '';
+}
+
+/* ============================================================================
+   交互绑定 + 实时刷新
+   ============================================================================ */
+function safeRecompute() {
+  try { render(scoreAll(readInputs())); }
+  catch (err) {
+    var b = el('boot');
+    b.className = '';
+    b.style.display = 'block';
+    b.textContent = '重算失败：' + (err && err.name) + ' —— ' + (err && err.message);
+  }
+}
+var remoteTimer = null;
+function onInputChange() {
+  syncPickers();
+  if (!loadingCards) safeRecompute();
+  if (el('amapKey').value.trim()) {
+    clearTimeout(remoteTimer);
+    remoteTimer = setTimeout(function () { loadRemote(scoreAll(readInputs())); }, 700);
+  }
+}
+function bindEvents() {
+  var ids = ['inOrigin','inAdults','inKids','inBudget','inDateStart','inDateEnd'];
+  for (var i = 0; i < ids.length; i++) {
+    var n = el(ids[i]);
+    if (n) n.addEventListener('input', onInputChange);
+  }
+  el('inKidAge').addEventListener('change', onInputChange);
+  el('inCurrency').addEventListener('change', onInputChange);
+  var all = document.querySelectorAll('input[type=radio], input[type=checkbox]');
+  for (var k = 0; k < all.length; k++) {
+    if (all[k].id === 'amapKey') continue;
+    all[k].addEventListener('change', onInputChange);
+  }
+
+  /* 图像快速切换 */
+  var btns = document.querySelectorAll('.profile-btn');
+  for (var b = 0; b < btns.length; b++) {
+    btns[b].addEventListener('click', function () {
+      applyProfile(this.getAttribute('data-profile'));
+      onInputChange();
+    });
+  }
+
+  /* 「更多偏好（可选）」折叠 */
+  el('moreToggle').addEventListener('click', function () {
+    var body = el('moreBody');
+    var collapsed = body.className.indexOf('collapsed') >= 0;
+    body.className = collapsed ? 'more-body' : 'more-body collapsed';
+    el('moreIcon').textContent = collapsed ? '▾' : '▸';
+  });
+
+  el('applyKey').addEventListener('click', function () { loadRemote(scoreAll(readInputs())); });
+  el('resetAll').addEventListener('click', function () { applyProfile('A'); onInputChange(); });
+
+  el('panelToggle').addEventListener('click', function () {
+    var panel = el('panel');
+    var collapsed = panel.className.indexOf('collapsed') >= 0;
+    panel.className = collapsed ? 'panel' : 'panel collapsed';
+    el('panelToggleIcon').textContent = collapsed ? '▾' : '▸';
+  });
+
+  /* 视频区声音开关 */
+  el('soundBtn').addEventListener('click', toggleSound);
+
+  el('cards').addEventListener('click', function (e) {
+    var t = e.target || e.srcElement;
+    while (t && t !== this) {
+      var cls = String(t.className || '');
+      if (cls.indexOf('js-detail') >= 0) { openDetail(t.getAttribute('data-city')); return; }
+      if (cls.indexOf('js-guide') >= 0) { openGuide(t.getAttribute('data-city')); return; }
+      t = t.parentNode;
+    }
+  });
+  el('detailBody').addEventListener('click', function (e) {
+    var t = e.target || e.srcElement;
+    while (t && t !== this) {
+      if (String(t.className || '').indexOf('js-guide') >= 0) { openGuide(t.getAttribute('data-city')); return; }
+      t = t.parentNode;
+    }
+  });
+
+  el('detailClose').addEventListener('click', hideModals);
+  el('guideClose').addEventListener('click', hideModals);
+  el('overlay').addEventListener('click', hideModals);
+  document.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' || e.keyCode === 27) hideModals();
+  });
+}
+
+/* ============================================================================
+   PWA：注册 Service Worker + 「添加到主屏幕」提示
+   ----------------------------------------------------------------------------
+   ① Service Worker 只在 https:// 或 http://localhost 下能注册；
+      file:// 双击打开时浏览器会拒绝，这里捕获异常后静默跳过，不影响页面。
+   ② 「添加到主屏幕」分两种：
+      · 安卓 Chrome / 桌面 Chrome：捕获 beforeinstallprompt，显示「立即添加」按钮
+      · iOS Safari：不支持该事件，只能给出「分享 → 添加到主屏幕」的操作指引
+   ============================================================================ */
+var deferredInstall = null;      // 暂存的安装事件
+
+/* 是否已经以「独立窗口」方式运行（说明已经从主屏幕打开了） */
+function isStandalone() {
+  return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+         window.navigator.standalone === true;
+}
+/* 是否 iOS（含 iPadOS 13+ 伪装成 Mac 的情况） */
+function isIOS() {
+  var ua = navigator.userAgent || '';
+  return /iPad|iPhone|iPod/.test(ua) ||
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+/* 是否已经被用户关掉过（本次会话内不再弹） */
+function installDismissed() {
+  try { return sessionStorage.getItem('xm_install_dismissed') === '1'; } catch (e) { return false; }
+}
+function dismissInstall() {
+  try { sessionStorage.setItem('xm_install_dismissed', '1'); } catch (e) {}
+  var box = el('installHint');
+  if (box) box.className = '';
+}
+
+function showInstallHint(mode) {
+  var box = el('installHint');
+  if (!box || isStandalone() || installDismissed()) return;
+  var desc = el('ihDesc');
+
+  if (mode === 'ios') {
+    desc.innerHTML = '在 Safari 里点底部的 <b>分享按钮</b>，再选 <b>「添加到主屏幕」</b>，' +
+                     '之后打开就是全屏，像 App 一样。';
+    /* iOS 没有可编程的安装按钮，把「立即添加」隐藏 */
+    var ib = el('ihInstall');
+    if (ib) ib.style.display = 'none';
+  } else {
+    desc.innerHTML = '装到主屏幕后，打开就是全屏，像 App 一样，不用每次输网址。' +
+                     (location.protocol === 'file:'
+                       ? '<br><span style="color:#C08C80">提示：用 file:// 打开时无法注册离线缓存，' +
+                         '把整个文件夹放到 https 或本地服务下才能离线可用。</span>'
+                       : '');
+  }
+  box.className = 'show';
+}
+
+function initPWA() {
+  /* ---------- 注册 Service Worker（离线可用） ---------- */
+  if ('serviceWorker' in navigator) {
+    if (location.protocol === 'https:' || location.hostname === 'localhost' ||
+        location.hostname === '127.0.0.1') {
+      window.addEventListener('load', function () {
+        navigator.serviceWorker.register('sw.js').then(function (reg) {
+          if (window.console && console.info) {
+            console.info('[小满出行] Service Worker 已注册，离线可用。作用域：' + reg.scope);
+          }
+        }).catch(function (err) {
+          if (window.console && console.warn) {
+            console.warn('[小满出行] Service Worker 注册失败（不影响页面使用）：' + err.message);
+          }
+        });
+      });
+    } else if (window.console && console.info) {
+      console.info('[小满出行] 当前是 ' + location.protocol +
+        ' 协议，浏览器不允许注册 Service Worker。放到 https 或本地服务下即可获得离线能力。');
+    }
+  }
+
+  /* ---------- 安卓 / 桌面 Chrome：捕获安装事件 ---------- */
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredInstall = e;
+    showInstallHint('android');
+  });
+
+  /* ---------- 安装完成的反馈 ---------- */
+  window.addEventListener('appinstalled', function () {
+    deferredInstall = null;
+    dismissInstall();
+    if (window.console && console.info) console.info('[小满出行] 已添加到主屏幕。');
+  });
+
+  /* ---------- iOS：没有安装事件，延迟给出手动指引 ---------- */
+  if (isIOS() && !isStandalone()) {
+    setTimeout(function () { showInstallHint('ios'); }, 3500);   // 等首屏稳定后再弹，不打断阅读
+  }
+
+  /* ---------- 关闭按钮 ---------- */
+  var close = el('ihClose');
+  if (close) close.addEventListener('click', dismissInstall);
+
+  /* ---------- 「立即添加」按钮：调起系统安装弹窗 ---------- */
+  var installBtn = el('ihInstall');
+  if (installBtn) {
+    installBtn.addEventListener('click', function () {
+      if (!deferredInstall) { dismissInstall(); return; }
+      deferredInstall.prompt();
+      deferredInstall.userChoice.then(function (r) {
+        if (r && r.outcome === 'accepted') dismissInstall();
+        deferredInstall = null;
+      });
+    });
+  }
+}
+
+/* ============================================================================
+   启动
+   ============================================================================ */
+(function init() {
+  var boot = el('boot');
+  try {
+    initHero();          // 视频 / 降级判定
+    refreshSoundUI();
+    bindEvents();
+    applyProfile('A');
+    syncPickers();
+    render(scoreAll(readInputs()));
+    setStatus('mock', '示例数据',
+      '小满出行已就绪。填入高德 Web 服务 Key 并点「应用并拉取真实数据」，即可用真实天气与 POI 参与推荐：' +
+      '串行请求 18 次，每次间隔 ' + REQ_GAP_MS + 'ms 以规避 QPS 限制，失败按 400 → 800ms 退避重试 ' + MAX_RETRY + ' 次。');
+  } catch (err) {
+    boot.className = '';
+    boot.style.display = 'block';
+    boot.textContent = '启动失败：' + (err && err.name) + ' —— ' + (err && err.message) +
+      '　位置：' + ((err && err.stack) ? String(err.stack).split('\n').slice(0, 3).join(' / ') : '未知');
+  }
+  initPWA();   // Service Worker 注册与「添加到主屏幕」提示，失败也不影响页面
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>直接测试 · intro.mp4</title>
+<style>
+  body { font-family: -apple-system, "Microsoft YaHei", sans-serif; background: #FAF7F2; color: #3D3D3D;
+         margin: 0; padding: 26px; line-height: 1.7; font-size: 14px; }
+  .box { max-width: 720px; margin: 0 auto; }
+  h1 { font-size: 19px; margin-bottom: 4px; }
+  .note { font-size: 12.5px; color: #9A9A9A; margin-bottom: 18px; }
+  .card { background: #fff; border-radius: 16px; padding: 16px 18px; box-shadow: 0 4px 20px rgba(0,0,0,.06); margin-bottom: 16px; }
+  .tag { font-size: 12px; font-weight: 600; padding: 4px 12px; border-radius: 999px; display: inline-block; margin-bottom: 10px; }
+  .ok { background: #EDF2EA; color: #5E7358; }
+  .bad { background: #F7EDEA; color: #A8776A; }
+  .wait { background: #EDF1F5; color: #5C7189; }
+  video { width: 100%; max-height: 240px; border-radius: 12px; background: #2b2b2b; display: block; }
+  code { background: #F3EDE4; padding: 2px 8px; border-radius: 6px; font-size: 12.5px; }
+  pre { background: #F3EDE4; padding: 12px 14px; border-radius: 10px; font-size: 12px; overflow-x: auto; }
+</style>
+</head>
+<body>
+<div class="box">
+
+  <h1>直接测试 · <code>assets\intro.mp4</code></h1>
+  <p class="note">
+    这个页面就放在 assets 文件夹里，用最短的相对路径 <code>intro.mp4</code> 直接读同一个文件夹的视频。
+    如果这里能播、而上一页（检查素材.html）报失败，那就是上一页放错了文件夹。两个都失败，就是浏览器限制或文件本身的问题。
+  </p>
+
+  <div class="card">
+    <span class="tag wait" id="tag">检查中…</span>
+    <video id="v" controls muted playsinline preload="auto" src="intro.mp4"></video>
+    <p class="note" id="info" style="margin-top:10px"></p>
+  </div>
+
+  <div class="card">
+    <b>如果这里也失败，按顺序自查：</b>
+    <ol>
+      <li>确认文件名真的叫 <code>intro.mp4</code>（不是 <code>intro.mp4.mp4</code>、不是 <code>视频_Cpu-0201 (1).mp4</code>）</li>
+      <li>确认它和这个页面在同一层（都在 assets 里）</li>
+      <li>双击 <code>intro.mp4</code> 用系统播放器打开 —— 系统能播而浏览器不能，通常是编码问题（H.265 等）</li>
+      <li>如果系统播放器也打不开，说明文件本身不完整</li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <b>当前文件夹里的文件</b>
+    <pre id="listing">（浏览器出于安全限制，无法列出本地文件夹内容，需要你在资源管理器里看）</pre>
+  </div>
+
+</div>
+
+<script>
+var v = document.getElementById('v');
+var tag = document.getElementById('tag');
+var info = document.getElementById('info');
+var settled = false;
+
+v.addEventListener('loadedmetadata', function () {
+  if (settled) return; settled = true;
+  tag.className = 'tag ok';
+  tag.textContent = '✓ 读到视频信息';
+  info.textContent = '时长 ' + v.duration.toFixed(1) + ' 秒　分辨率 ' + v.videoWidth + '×' + v.videoHeight +
+                     '　（如果画面是黑的，说明编码浏览器不支持，需要转码）';
+});
+v.addEventListener('loadeddata', function () {
+  if (settled) return; settled = true;
+  tag.className = 'tag ok';
+  tag.textContent = '✓ 可以播放';
+  info.textContent = '时长 ' + v.duration.toFixed(1) + ' 秒　分辨率 ' + v.videoWidth + '×' + v.videoHeight;
+});
+v.addEventListener('error', function () {
+  if (settled) return; settled = true;
+  var e = v.error;
+  var map = {
+    1: '加载被中断（ABORTED）',
+    2: '网络错误（NETWORK）',
+    3: '解码失败 —— 文件存在但编码浏览器不支持，需要转码（常见于 H.265/HEVC）',
+    4: 'SRC_NOT_SUPPORTED —— 浏览器拒绝读取这个文件（路径不存在，或本地文件访问被限制）'
+  };
+  tag.className = 'tag bad';
+  tag.textContent = '✕ 失败';
+  info.textContent = '错误码 ' + (e ? e.code : '?') + '：' + (e && map[e.code] ? map[e.code] : '未知');
+});
+setTimeout(function () {
+  if (settled) return;
+  tag.className = 'tag bad';
+  tag.textContent = '✕ 6 秒内无数据';
+  info.textContent = '浏览器始终没取到视频数据。请对照下面第 1、2 条自查。';
+}, 6000);
+
+/* 同时用 fetch 直接探一次，能拿到字节就说明路径没问题 */
+try {
+  fetch('intro.mp4').then(function (r) {
+    document.getElementById('listing').textContent =
+      'fetch 探测结果：HTTP ' + r.status + '\n' +
+      'Content-Type：' + (r.headers.get('content-type') || '未知') + '\n' +
+      'Content-Length：' + (r.headers.get('content-length') || '未知') + ' 字节\n' +
+      '（能读到字节数就说明路径和文件都存在，问题在编码或播放策略）';
+  }).catch(function (err) {
+    document.getElementById('listing').textContent =
+      'fetch 探测失败：' + err.message + '\n' +
+      '这通常意味着：文件不在这个文件夹里，或者浏览器禁止 file:// 页面读取本地文件。';
+  });
+} catch (e) {}
+</script>
+</body>
+</html>

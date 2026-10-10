@@ -1,0 +1,28 @@
+{
+  "name": "小满出行 · 为全家找到刚刚好的那趟旅行",
+  "short_name": "小满出行",
+  "description": "根据预算、住宿、松弛感与出行日期的气候，为有孩子的家庭推荐国内目的地并生成行程。",
+  "lang": "zh-CN",
+  "dir": "ltr",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#FAF7F2",
+  "theme_color": "#B5C4B1",
+  "categories": ["travel", "lifestyle"],
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
